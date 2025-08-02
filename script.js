@@ -467,6 +467,7 @@ loader.init().then(monaco => {
     localStorage.setItem('code', code)
     try {
       fn = new Function(code)
+      log('')
     }
     catch (e) {
       log(e.stack.split('\n')[0])
