@@ -98,6 +98,13 @@
       border: none;
     }
 
+    #visualizer,
+    #waveform {
+      border: 1px solid #333;
+      border-radius: 4px;
+      background: #000;
+    }
+
     #editor {
       position: fixed;
       top: 60px;
@@ -130,6 +137,9 @@
       </svg>
       <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
     </div>
+    <canvas id="visualizer" width="200" height="40"></canvas>
+    <canvas id="waveform" width="200" height="40"></canvas>
+    <canvas id="waveformDisplay" width="200" height="40"></canvas>
   </div>
   <div id="editor"></div>
   <script src="/script.js" type="module"></script>

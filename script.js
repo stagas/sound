@@ -126,12 +126,115 @@ g.sampleRate = ctx.sampleRate
 const gainNode = ctx.createGain()
 gainNode.connect(ctx.destination)
 
+// Create analyser node for visualization
+const analyser = ctx.createAnalyser()
+analyser.fftSize = 2048
+analyser.smoothingTimeConstant = 0.8
+gainNode.connect(analyser)
+
 const script = ctx.createScriptProcessor(1024, 1, 1)
 script.connect(gainNode)
+
+// Canvas visualizer setup
+const canvas = document.getElementById('visualizer')
+const canvasCtx = canvas.getContext('2d', { alpha: false })
+const waveformCanvas = document.getElementById('waveform')
+const waveformCtx = waveformCanvas.getContext('2d', { alpha: false })
+const waveformDisplayCanvas = document.getElementById('waveformDisplay')
+const waveformDisplayCtx = waveformDisplayCanvas.getContext('2d', { alpha: false })
+const bufferLength = analyser.frequencyBinCount
+const dataArray = new Uint8Array(bufferLength)
 
 // Playback state
 let isPlaying = false
 let isStopped = true
+
+function updateVisualizer() {
+  if (!isPlaying) return
+
+  // Get time domain data for actual waveform
+  analyser.getByteTimeDomainData(dataArray)
+
+  // Use peak amplitude from a small sample for more variation
+  let peak = 0
+  const sampleSize = Math.min(32, dataArray.length) // Use smaller sample for more variation
+  for (let i = 0; i < sampleSize; i++) {
+    const sample = Math.abs((dataArray[i] - 128) / 128) // Convert to 0 to 1 range
+    peak = Math.max(peak, sample)
+  }
+
+  // Shift the entire canvas content left by 1 pixel using getImageData/putImageData
+  const imageData = canvasCtx.getImageData(1, 0, canvas.width - 1, canvas.height)
+  canvasCtx.putImageData(imageData, 0, 0)
+
+  // Clear the rightmost column
+  canvasCtx.clearRect(canvas.width - 1, 0, 1, canvas.height)
+
+  // Draw the new amplitude bar on the right
+  const barHeight = Math.max(1, peak * canvas.height)
+  const y = (canvas.height - barHeight) / 2
+
+  canvasCtx.fillStyle = '#007acc'
+  canvasCtx.fillRect(canvas.width - 1, y, 1, barHeight)
+
+  requestAnimationFrame(updateVisualizer)
+}
+
+function updateWaveform() {
+  if (!isPlaying) return
+
+  // Get frequency data for FFT display
+  analyser.getByteFrequencyData(dataArray)
+
+  // Clear the entire canvas
+  waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height)
+
+  // Draw FFT bars
+  const barWidth = waveformCanvas.width / dataArray.length
+  for (let i = 0; i < dataArray.length; i++) {
+    const barHeight = (dataArray[i] / 255) * waveformCanvas.height
+    const x = i * barWidth
+    const y = waveformCanvas.height - barHeight
+
+    waveformCtx.fillStyle = '#009900'
+    waveformCtx.fillRect(x, y, barWidth + 1, barHeight)
+  }
+
+  requestAnimationFrame(updateWaveform)
+}
+
+function updateWaveformDisplay() {
+  if (!isPlaying) return
+
+  // Get time domain data for actual waveform
+  analyser.getByteTimeDomainData(dataArray)
+
+  // Clear the entire canvas
+  waveformDisplayCtx.clearRect(0, 0, waveformDisplayCanvas.width, waveformDisplayCanvas.height)
+
+  // Draw waveform
+  waveformDisplayCtx.beginPath()
+  waveformDisplayCtx.strokeStyle = '#ff00ff'
+  waveformDisplayCtx.lineWidth = 1
+
+  for (let i = 0; i < dataArray.length; i++) {
+    const x = (i / dataArray.length) * waveformDisplayCanvas.width
+    const sample = (dataArray[i] - 128) / 128 // Convert to -1 to 1 range
+    const y = (waveformDisplayCanvas.height / 2) + (sample * (waveformDisplayCanvas.height / 2))
+
+    if (i === 0) {
+      waveformDisplayCtx.moveTo(x, y)
+    }
+    else {
+      waveformDisplayCtx.lineTo(x, y)
+    }
+  }
+
+  waveformDisplayCtx.stroke()
+
+  requestAnimationFrame(updateWaveformDisplay)
+}
+
 script.onaudioprocess = function(e) {
   const output = e.outputBuffer.getChannelData(0)
 
@@ -316,6 +419,9 @@ function play() {
   isPlaying = true
   isStopped = false
   updatePlayButton()
+  updateVisualizer()
+  updateWaveform()
+  updateWaveformDisplay()
 }
 
 function pause() {
