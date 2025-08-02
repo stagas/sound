@@ -118,10 +118,19 @@ let n = 0
 let fn = function() {}
 
 const ctx = new AudioContext()
+ctx.suspend()
 g.sampleRate = ctx.sampleRate
-ctx.resume()
+
+// Create gain node for volume control
+const gainNode = ctx.createGain()
+gainNode.connect(ctx.destination)
+
 const script = ctx.createScriptProcessor(1024, 1, 1)
-script.connect(ctx.destination)
+script.connect(gainNode)
+
+// Playback state
+let isPlaying = false
+let isStopped = true
 script.onaudioprocess = function(e) {
   const output = e.outputBuffer.getChannelData(0)
 
@@ -283,7 +292,7 @@ loader.init().then(monaco => {
     editor.layout()
   })
 
-  editor.onDidChangeModelContent(e => {
+  function compile() {
     const code = editor.getValue()
     localStorage.setItem('code', code)
     try {
@@ -292,5 +301,66 @@ loader.init().then(monaco => {
     catch (e) {
       console.error(e)
     }
-  })
+  }
+
+  editor.onDidChangeModelContent(compile)
+  compile()
+})
+
+// Playback controls
+function play() {
+  if (ctx.state === 'suspended') {
+    ctx.resume()
+  }
+  isPlaying = true
+  isStopped = false
+  updatePlayButton()
+}
+
+function pause() {
+  ctx.suspend()
+  isPlaying = false
+  updatePlayButton()
+}
+
+function stop() {
+  ctx.suspend()
+  isPlaying = false
+  isStopped = true
+  t = 0
+  n = 0
+  updatePlayButton()
+}
+
+function updatePlayButton() {
+  const button = document.getElementById('playPause')
+  const playIcon = button.querySelector('.icon:not(.pause)')
+  const pauseIcon = button.querySelector('.icon.pause')
+
+  if (isPlaying) {
+    button.classList.add('playing')
+    playIcon.style.display = 'none'
+    pauseIcon.style.display = 'inline'
+  }
+  else {
+    button.classList.remove('playing')
+    playIcon.style.display = 'inline'
+    pauseIcon.style.display = 'none'
+  }
+}
+
+// Event listeners
+document.getElementById('playPause').addEventListener('click', () => {
+  if (isPlaying) {
+    pause()
+  }
+  else {
+    play()
+  }
+})
+
+document.getElementById('stop').addEventListener('click', stop)
+
+document.getElementById('volume').addEventListener('input', (e) => {
+  gainNode.gain.value = e.target.value
 })
