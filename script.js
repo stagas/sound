@@ -13,6 +13,7 @@ const uiConsole = document.getElementById('console')
 function log(...args) {
   uiConsole.textContent = args.join(' ')
 }
+g.log = log
 
 Array.prototype.pick = function(value) {
   const index = Math.floor(value * this.length)
@@ -439,6 +440,10 @@ loader.init().then(monaco => {
       oct(other?: number): Number
     }
 
+    /** Writes to the console.
+     * @param {...any} args The arguments to log.
+     */
+    declare function log(...args: any[]): void
     `,
   ].join('\n')
 
