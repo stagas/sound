@@ -1,6 +1,7 @@
 import loader from 'https://esm.sh/@monaco-editor/loader'
 import { Biquad } from './biquad.js'
 import { demo } from './demo.js'
+import { demo2 } from './demo2.js'
 import { Sin, Tri } from './osc.js'
 import { PolyBlepOscillator } from './polyblep-oscillator.js'
 import { clamp } from './util.js'
@@ -475,6 +476,20 @@ loader.init().then(monaco => {
 
   editor.onDidChangeModelContent(compile)
   compile()
+
+  // Demo picker functionality
+  const demoPicker = document.getElementById('demoPicker')
+
+  function loadDemo(demoName) {
+    const demoContent = demoName === 'demo2' ? demo2 : demo
+    editor.setValue(demoContent)
+    localStorage.setItem('code', demoContent)
+    compile()
+  }
+
+  demoPicker.addEventListener('change', (e) => {
+    loadDemo(e.target.value)
+  })
 })
 
 // Playback controls
