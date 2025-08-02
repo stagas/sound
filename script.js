@@ -7,9 +7,9 @@ import { demo } from './demo.js'
 import { demo2 } from './demo2.js'
 import { demo3 } from './demo3.js'
 import { demo4 } from './demo4.js'
-import { demo5 } from './demo5.js'
 import { Expander } from './expander.js'
 import { Gate } from './gate.js'
+import { KarplusStrong } from './karplus-strong.js'
 import { Sin } from './osc.js'
 import { PolyBlepOscillator } from './polyblep-oscillator.js'
 import { DattorroReverb } from './reverb.js'
@@ -30,10 +30,10 @@ Array.prototype.pick = function(value) {
   return this[clamp(index, 0, this.length - 1)]
 }
 
-Array.prototype.chord = function(oscillator, octave = 0, sync = false) {
+Array.prototype.chord = function(oscillator, octave = 0, ...rest) {
   return this.reduce((sum, semitone) => {
     const freq = (semitone + (octave * 12)).ntof
-    return sum + oscillator(freq, sync)
+    return sum + oscillator(freq, ...rest)
   }, 0)
 }
 
@@ -214,6 +214,27 @@ function white() {
   return Math.random() * 2 - 1
 }
 g.white = white
+
+let karplus_i = 0
+const karplus = []
+function karplusStrong(freq, pluck) {
+  let ks
+  if (karplus_i >= karplus.length) {
+    karplus.push(ks = new KarplusStrong())
+  }
+  else {
+    ks = karplus[karplus_i]
+  }
+  if (freq !== ks.frequency) {
+    ks.setFrequency(freq)
+  }
+  if (pluck) {
+    ks.pluck()
+  }
+  karplus_i++
+  return ks.process()
+}
+g.ks = karplusStrong
 
 function exp(period, rate) {
   return Math.exp(-(t % period) * rate)
@@ -505,6 +526,7 @@ script.onaudioprocess = function(e) {
       compressors_i =
       expanders_i =
       gates_i =
+      karplus_i =
         0
 
     t = n / sampleRate
@@ -907,23 +929,14 @@ loader.init().then(monaco => {
   // Demo picker functionality
   const demoPicker = document.getElementById('demoPicker')
 
+  const demos = {
+    demo,
+    demo2,
+    demo3,
+    demo4,
+  }
   function loadDemo(demoName) {
-    let demoContent
-    if (demoName === 'demo2') {
-      demoContent = demo2
-    }
-    else if (demoName === 'demo3') {
-      demoContent = demo3
-    }
-    else if (demoName === 'demo4') {
-      demoContent = demo4
-    }
-    else if (demoName === 'demo5') {
-      demoContent = demo5
-    }
-    else {
-      demoContent = demo
-    }
+    const demoContent = demos[demoName]
     editor.setValue(demoContent)
     localStorage.setItem('code', demoContent)
     compile()
@@ -1052,6 +1065,15 @@ const componentData = {
       parameters: [
         'period: The period.',
         'rate: The decay rate.',
+      ],
+    },
+    {
+      name: 'ks',
+      signature: 'ks(freq: number, pluck?: boolean): number',
+      description: 'Karplus-Strong plucked string synthesis.',
+      parameters: [
+        'freq: The frequency of the string.',
+        'pluck: Trigger a new pluck when true.',
       ],
     },
   ],
