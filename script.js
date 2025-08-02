@@ -2,7 +2,7 @@ import loader from 'https://esm.sh/@monaco-editor/loader'
 import { Biquad } from './biquad.js'
 import { demo } from './demo.js'
 import { demo2 } from './demo2.js'
-import { Sin, Tri } from './osc.js'
+import { Sin } from './osc.js'
 import { PolyBlepOscillator } from './polyblep-oscillator.js'
 import { clamp } from './util.js'
 
@@ -84,27 +84,6 @@ function sin(freq, sync) {
 }
 g.sin = sin
 
-let tris_i = 0
-const tris = []
-function tri(freq, sync) {
-  let osc
-  if (tris_i >= tris.length) {
-    tris.push(osc = new Tri())
-  }
-  else {
-    osc = tris[tris_i]
-  }
-  if (freq !== osc.frequency) {
-    osc.setFrequency(freq)
-  }
-  tris_i++
-  if (sync) {
-    osc.phase = 0
-  }
-  return osc.process()
-}
-g.tri = tri
-
 let polybleps_i = 0
 const polybleps = []
 function createPolyBlep(waveform) {
@@ -131,6 +110,7 @@ function createPolyBlep(waveform) {
 }
 g.saw = createPolyBlep(0)
 g.sqr = createPolyBlep(1)
+g.tri = createPolyBlep(2)
 
 function white() {
   return Math.random() * 2 - 1
@@ -294,7 +274,6 @@ script.onaudioprocess = function(e) {
 
   for (let i = 0; i < output.length; i++) {
     sines_i =
-      tris_i =
       polybleps_i =
       biquads_i =
         0

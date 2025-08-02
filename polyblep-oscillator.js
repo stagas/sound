@@ -66,21 +66,26 @@ export class PolyBlepOscillator {
         break
 
       case 2: // Triangle (integrated square)
-        // Generate square wave first
-        let square = 0.0
-        if (this.phase < 0.5) {
-          square = 1.0
+        if (this.frequency <= 100) {
+          output = Math.abs(1 - (2 * this.phase) % 2) * 2 - 1
         }
         else {
-          square = -1.0
-        }
-        square += this.polyBlep(this.phase)
-        square -= this.polyBlep((this.phase + 0.5) % 1.0)
+          // Generate square wave first
+          let square = 0.0
+          if (this.phase < 0.5) {
+            square = 1.0
+          }
+          else {
+            square = -1.0
+          }
+          square += this.polyBlep(this.phase)
+          square -= this.polyBlep((this.phase + 0.5) % 1.0)
 
-        // Integrate to get triangle (leaky integrator)
-        const leak = 0.995
-        this.lastOutput = this.lastOutput * leak + (square * dt * 4.0)
-        output = this.lastOutput
+          // Integrate to get triangle (leaky integrator)
+          const leak = 0.995
+          this.lastOutput = this.lastOutput * leak + (square * dt * 4.0)
+          output = this.lastOutput
+        }
         break
 
       default:
