@@ -781,17 +781,30 @@ loader.init().then(monaco => {
 
     }
 
+    type Scale =
+      | 'major'
+      | 'minor'
+      | 'dorian'
+      | 'phrygian'
+      | 'lydian'
+      | 'mixolydian'
+      | 'locrian'
+      | 'harmonic-minor'
+      | 'melodic-minor'
+      | 'pentatonic-major'
+      | 'pentatonic-minor'
+
     interface String {
       /** Parses a string of notes and returns an array of semitone numbers.
        * @example 'c c# d d# g2 a3 a#3'.notes returns [0, 1, 2, 3, 7, 9, 10]
        */
       readonly notes: number[]
       /** Parses a string of chord progressions and returns an array of chord arrays.
-       * @param {string} scale The scale to use (e.g., 'dorian', 'major', 'minor').
+       * @param {Scale} scale The scale to use (e.g., 'dorian', 'major', 'minor').
        * @returns {number[][]} Array of chord arrays, each containing semitone numbers.
        * @example 'i iv iii v'.chords('dorian') returns [[0,2,4], [3,5,7], [2,4,6], [4,6,8]]
        */
-      chords(scale: string): number[][]
+      chords(scale: Scale): number[][]
     }
 
     /** Writes to the console.
