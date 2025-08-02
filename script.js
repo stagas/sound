@@ -48,6 +48,42 @@ Object.defineProperty(Number.prototype, 'ntof', {
   },
 })
 
+Object.defineProperty(String.prototype, 'notes', {
+  get: function() {
+    const noteMap = {
+      'c': 0,
+      'c#': 1,
+      'db': 1,
+      'd': 2,
+      'd#': 3,
+      'eb': 3,
+      'e': 4,
+      'f': 5,
+      'f#': 6,
+      'gb': 6,
+      'g': 7,
+      'g#': 8,
+      'ab': 8,
+      'a': 9,
+      'a#': 10,
+      'bb': 10,
+      'b': 11,
+    }
+
+    return this.trim().split(/\s+/).map(note => {
+      const match = note.toLowerCase().match(/^([a-g][#b]?)(\d*)$/)
+      if (!match) return null
+
+      const [, noteName, octave] = match
+      const baseNote = noteMap[noteName]
+      if (baseNote === undefined) return null
+
+      const octaveNum = octave ? parseInt(octave) : 0
+      return baseNote + (octaveNum * 12)
+    }).filter(note => note !== null)
+  },
+})
+
 Number.prototype.mul = function(other = 0) {
   return this * other
 }
@@ -660,8 +696,15 @@ loader.init().then(monaco => {
       sub(other?: number): number
       /** Divides a number by another. */
       div(other?: number): number
-      /** Octaves a number by another. */
-      oct(other?: number): Number
+      /** Number of octaves to add to a semitone number. */
+      oct(octaves?: number): number
+    }
+
+    interface String {
+      /** Parses a string of notes and returns an array of semitone numbers.
+       * @example 'c c# d d# g2 a3 a#3'.notes returns [0, 1, 2, 3, 7, 9, 10]
+       */
+      readonly notes: number[]
     }
 
     /** Writes to the console.
@@ -1201,6 +1244,80 @@ const componentData = {
       description: 'Writes to the console.',
       parameters: [
         'args: The arguments to log.',
+      ],
+    },
+  ],
+  extensions: [
+    {
+      name: 'Array.pick',
+      signature: 'array.pick(value: number): T',
+      description: 'Pick a value from an array using a 0..1 index.',
+      parameters: [
+        'value: 0..1 scales to the array length.',
+      ],
+    },
+    {
+      name: 'Number.o1',
+      signature: 'number.o1: number',
+      description: 'Scales a -1..1 value to 0..1 range.',
+      parameters: [],
+    },
+    {
+      name: 'Number.w',
+      signature: 'number.w: number',
+      description: 'Folds a -1..1 value to 0..1 range (absolute value).',
+      parameters: [],
+    },
+    {
+      name: 'Number.ntof',
+      signature: 'number.ntof: number',
+      description: 'Converts a semitone number to a frequency.',
+      parameters: [],
+    },
+    {
+      name: 'String.notes',
+      signature: 'string.notes: number[]',
+      description: 'Parses a string of notes and returns an array of semitone numbers.',
+      parameters: [],
+    },
+    {
+      name: 'Number.mul',
+      signature: 'number.mul(other?: number): number',
+      description: 'Multiplies a number by another.',
+      parameters: [
+        'other: The number to multiply by (defaults to 0).',
+      ],
+    },
+    {
+      name: 'Number.add',
+      signature: 'number.add(other?: number): number',
+      description: 'Adds a number to another.',
+      parameters: [
+        'other: The number to add (defaults to 0).',
+      ],
+    },
+    {
+      name: 'Number.sub',
+      signature: 'number.sub(other?: number): number',
+      description: 'Subtracts a number from another.',
+      parameters: [
+        'other: The number to subtract (defaults to 0).',
+      ],
+    },
+    {
+      name: 'Number.div',
+      signature: 'number.div(other?: number): number',
+      description: 'Divides a number by another.',
+      parameters: [
+        'other: The number to divide by (defaults to 0).',
+      ],
+    },
+    {
+      name: 'Number.oct',
+      signature: 'number.oct(octaves?: number): number',
+      description: 'Adds octaves to a semitone number.',
+      parameters: [
+        'octaves: The number of octaves to add (defaults to 0).',
       ],
     },
   ],
