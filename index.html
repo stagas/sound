@@ -78,6 +78,7 @@
       border-radius: 2px;
       outline: none;
       -webkit-appearance: none;
+      appearance: none;
     }
 
     .volume-control input::-webkit-slider-thumb {
@@ -133,7 +134,22 @@
       top: 60px;
       left: 0;
       right: 0;
+      bottom: 60px;
+    }
+
+    #console {
+      position: fixed;
       bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      color: white;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.2;
+      padding: 10px;
+      background: #000;
+      border-top: 1px solid #333;
     }
   </style>
 </head>
@@ -177,6 +193,7 @@
     </a>
   </div>
   <div id="editor"></div>
+  <div id="console"></div>
   <script src="/script.js" type="module"></script>
 </body>
 

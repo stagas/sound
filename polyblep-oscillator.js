@@ -7,7 +7,7 @@ export class PolyBlepOscillator {
     this.dt = 0.0
   }
 
-  setFrequency(freq) {
+  setFrequency(freq = 0) {
     this.frequency = freq
     this.dt = freq / sampleRate
   }

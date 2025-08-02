@@ -1,15 +1,21 @@
 import loader from 'https://esm.sh/@monaco-editor/loader'
 import { Biquad } from './biquad.js'
 import { demo } from './demo.js'
+import { Sin, Tri } from './osc.js'
 import { PolyBlepOscillator } from './polyblep-oscillator.js'
-import { Sin } from './sin.js'
 import { clamp } from './util.js'
 
 const g = window.globalThis
 g.out = 0
 
+const uiConsole = document.getElementById('console')
+function log(...args) {
+  uiConsole.textContent = args.join(' ')
+}
+
 Array.prototype.pick = function(value) {
-  return this[clamp(Math.floor(value * this.length), 0, this.length - 1)]
+  const index = Math.floor(value * this.length)
+  return this[clamp(index, 0, this.length - 1)]
 }
 
 Object.defineProperty(Number.prototype, 'o1', {
@@ -23,6 +29,32 @@ Object.defineProperty(Number.prototype, 'w', {
     return this < 0 ? -this : this
   },
 })
+
+Object.defineProperty(Number.prototype, 'ntof', {
+  get: function() {
+    return 440 * Math.pow(2, (this - 69) / 12)
+  },
+})
+
+Number.prototype.mul = function(other = 0) {
+  return this * other
+}
+
+Number.prototype.add = function(other = 0) {
+  return this + other
+}
+
+Number.prototype.sub = function(other = 0) {
+  return this - other
+}
+
+Number.prototype.div = function(other = 0) {
+  return this / other
+}
+
+Number.prototype.oct = function(other = 0) {
+  return this + (12 * other)
+}
 
 function sync(period, offset = 0) {
   return (t + offset) % period < 0.0000001
@@ -50,6 +82,27 @@ function sin(freq, sync) {
 }
 g.sin = sin
 
+let tris_i = 0
+const tris = []
+function tri(freq, sync) {
+  let osc
+  if (tris_i >= tris.length) {
+    tris.push(osc = new Tri())
+  }
+  else {
+    osc = tris[tris_i]
+  }
+  if (freq !== osc.frequency) {
+    osc.setFrequency(freq)
+  }
+  tris_i++
+  if (sync) {
+    osc.phase = 0
+  }
+  return osc.process()
+}
+g.tri = tri
+
 let polybleps_i = 0
 const polybleps = []
 function createPolyBlep(waveform) {
@@ -76,7 +129,6 @@ function createPolyBlep(waveform) {
 }
 g.saw = createPolyBlep(0)
 g.sqr = createPolyBlep(1)
-g.tri = createPolyBlep(2)
 
 function white() {
   return Math.random() * 2 - 1
@@ -132,7 +184,7 @@ analyser.fftSize = 2048
 analyser.smoothingTimeConstant = 0.8
 gainNode.connect(analyser)
 
-const script = ctx.createScriptProcessor(1024, 1, 1)
+const script = ctx.createScriptProcessor(4096, 1, 1)
 script.connect(gainNode)
 
 // Canvas visualizer setup
@@ -240,6 +292,7 @@ script.onaudioprocess = function(e) {
 
   for (let i = 0; i < output.length; i++) {
     sines_i =
+      tris_i =
       polybleps_i =
       biquads_i =
         0
@@ -371,6 +424,18 @@ loader.init().then(monaco => {
       readonly o1: number
       /** Folds a -1..1 value to 0..1 */
       readonly w: number
+      /** Converts a semitone number to a frequency. */
+      readonly ntof: number
+      /** Multiplies a number by another. */
+      mul(other?: number): number
+      /** Adds a number to another. */
+      add(other?: number): number
+      /** Subtracts a number from another. */
+      sub(other?: number): number
+      /** Divides a number by another. */
+      div(other?: number): number
+      /** Octaves a number by another. */
+      oct(other?: number): Number
     }
 
     `,
@@ -403,6 +468,7 @@ loader.init().then(monaco => {
       fn = new Function(code)
     }
     catch (e) {
+      log(e.stack.split('\n')[0])
       console.error(e)
     }
   }
