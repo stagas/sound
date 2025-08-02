@@ -1,4 +1,5 @@
 import loader from 'https://esm.sh/@monaco-editor/loader'
+import { createPopper } from 'https://esm.sh/@popperjs/core'
 import { Biquad } from './biquad.js'
 import { Compressor } from './compressor.js'
 import { Delay } from './delay.js'
@@ -883,4 +884,445 @@ document.getElementById('stop').addEventListener('click', stop)
 
 document.getElementById('volume').addEventListener('input', (e) => {
   gainNode.gain.value = e.target.value
+})
+
+// Help modal functionality
+const helpModal = document.getElementById('helpModal')
+const helpContent = document.getElementById('helpContent')
+const helpBtn = document.getElementById('helpBtn')
+const closeHelp = document.getElementById('closeHelp')
+
+const componentData = {
+  oscillators: [
+    {
+      name: 'sin',
+      signature: 'sin(freq: number, sync?: boolean): number',
+      description: 'A sine oscillator.',
+      parameters: [
+        'freq: The frequency of the oscillator.',
+        'sync: Reset phase when true.',
+      ],
+    },
+    {
+      name: 'saw',
+      signature: 'saw(freq: number, sync?: boolean): number',
+      description: 'A sawtooth oscillator.',
+      parameters: [
+        'freq: The frequency of the oscillator.',
+        'sync: Reset phase when true.',
+      ],
+    },
+    {
+      name: 'sqr',
+      signature: 'sqr(freq: number, sync?: boolean): number',
+      description: 'A square oscillator.',
+      parameters: [
+        'freq: The frequency of the oscillator.',
+        'sync: Reset phase when true.',
+      ],
+    },
+    {
+      name: 'tri',
+      signature: 'tri(freq: number, sync?: boolean): number',
+      description: 'A triangle oscillator.',
+      parameters: [
+        'freq: The frequency of the oscillator.',
+        'sync: Reset phase when true.',
+      ],
+    },
+    {
+      name: 'white',
+      signature: 'white(): number',
+      description: 'White noise.',
+      parameters: [],
+    },
+    {
+      name: 'exp',
+      signature: 'exp(period: number, rate: number): number',
+      description: 'Exponential decay.',
+      parameters: [
+        'period: The period.',
+        'rate: The decay rate.',
+      ],
+    },
+  ],
+  sync: [
+    {
+      name: 'sync',
+      signature: 'sync(period: number, offset?: number): boolean',
+      description: 'Used to sync the phase of an oscillator.',
+      parameters: [
+        'period: The period to sync to.',
+        'offset: The time offset to drift from.',
+      ],
+    },
+  ],
+  filters: [
+    {
+      name: 'lp',
+      signature: 'lp(input: number, cut: number, res: number): number',
+      description: 'Low pass filter.',
+      parameters: [
+        'input: The input signal.',
+        'cut: The cutoff frequency.',
+        'res: The resonance.',
+      ],
+    },
+    {
+      name: 'hp',
+      signature: 'hp(input: number, cut: number, res: number): number',
+      description: 'High pass filter.',
+      parameters: [
+        'input: The input signal.',
+        'cut: The cutoff frequency.',
+        'res: The resonance.',
+      ],
+    },
+    {
+      name: 'bp',
+      signature: 'bp(input: number, cut: number, res: number): number',
+      description: 'Band pass filter.',
+      parameters: [
+        'input: The input signal.',
+        'cut: The cutoff frequency.',
+        'res: The resonance.',
+      ],
+    },
+    {
+      name: 'nt',
+      signature: 'nt(input: number, cut: number, res: number): number',
+      description: 'Notch filter.',
+      parameters: [
+        'input: The input signal.',
+        'cut: The cutoff frequency.',
+        'res: The resonance.',
+      ],
+    },
+    {
+      name: 'ap',
+      signature: 'ap(input: number, cut: number, res: number): number',
+      description: 'All pass filter.',
+      parameters: [
+        'input: The input signal.',
+        'cut: The cutoff frequency.',
+        'res: The resonance.',
+      ],
+    },
+    {
+      name: 'pk',
+      signature: 'pk(input: number, cut: number, res: number, gain: number): number',
+      description: 'Peaking filter.',
+      parameters: [
+        'input: The input signal.',
+        'cut: The cutoff frequency.',
+        'res: The resonance.',
+        'gain: The gain.',
+      ],
+    },
+    {
+      name: 'ls',
+      signature: 'ls(input: number, cut: number, res: number): number',
+      description: 'Low shelf filter.',
+      parameters: [
+        'input: The input signal.',
+        'cut: The cutoff frequency.',
+        'res: The resonance.',
+      ],
+    },
+    {
+      name: 'hs',
+      signature: 'hs(input: number, cut: number, res: number): number',
+      description: 'High shelf filter.',
+      parameters: [
+        'input: The input signal.',
+        'cut: The cutoff frequency.',
+        'res: The resonance.',
+      ],
+    },
+  ],
+  effects: [
+    {
+      name: 'delay',
+      signature: 'delay(input: number, time: number, feedback: number, wet: number): number',
+      description: 'Delay with cubic interpolation.',
+      parameters: [
+        'input: The input signal.',
+        'time: The delay time in seconds.',
+        'feedback: The feedback amount (0-0.99).',
+        'wet: The wet mix amount (0-1).',
+      ],
+    },
+    {
+      name: 'reverb',
+      signature:
+        'reverb(input: number, diffusion1: number, diffusion2: number, damping: number, decay: number, wet: number): number',
+      description: 'Dattorro reverb effect.',
+      parameters: [
+        'input: The input signal.',
+        'diffusion1: The first diffusion amount (0-1).',
+        'diffusion2: The second diffusion amount (0-1).',
+        'damping: The damping amount (0-1).',
+        'decay: The decay amount (0-0.99).',
+        'wet: The wet mix amount (0-1).',
+      ],
+    },
+  ],
+  waveshapers: [
+    {
+      name: 'tanh',
+      signature: 'tanh(input: number, amount?: number): number',
+      description: 'Tanh waveshaping for soft saturation.',
+      parameters: [
+        'input: The input signal.',
+        'amount: The waveshaping amount (1-10).',
+      ],
+    },
+    {
+      name: 'atan',
+      signature: 'atan(input: number, amount?: number): number',
+      description: 'Arctangent waveshaping for hard saturation.',
+      parameters: [
+        'input: The input signal.',
+        'amount: The waveshaping amount (1-10).',
+      ],
+    },
+    {
+      name: 'cubic',
+      signature: 'cubic(input: number, amount?: number): number',
+      description: 'Cubic waveshaping for asymmetric distortion.',
+      parameters: [
+        'input: The input signal.',
+        'amount: The waveshaping amount (1-10).',
+      ],
+    },
+    {
+      name: 'soft',
+      signature: 'soft(input: number, amount?: number): number',
+      description: 'Soft clipping waveshaping.',
+      parameters: [
+        'input: The input signal.',
+        'amount: The waveshaping amount (1-10).',
+      ],
+    },
+    {
+      name: 'hard',
+      signature: 'hard(input: number, amount?: number): number',
+      description: 'Hard clipping waveshaping.',
+      parameters: [
+        'input: The input signal.',
+        'amount: The waveshaping amount (1-10).',
+      ],
+    },
+    {
+      name: 'fold',
+      signature: 'fold(input: number, amount?: number): number',
+      description: 'Wave folding distortion.',
+      parameters: [
+        'input: The input signal.',
+        'amount: The waveshaping amount (1-10).',
+      ],
+    },
+    {
+      name: 'cheb',
+      signature: 'cheb(input: number, amount?: number): number',
+      description: 'Chebyshev harmonic distortion.',
+      parameters: [
+        'input: The input signal.',
+        'amount: The waveshaping amount (1-10).',
+      ],
+    },
+    {
+      name: 'crush',
+      signature: 'crush(input: number, amount?: number): number',
+      description: 'Bit crusher distortion.',
+      parameters: [
+        'input: The input signal.',
+        'amount: The waveshaping amount (1-10).',
+      ],
+    },
+    {
+      name: 'reduce',
+      signature: 'reduce(input: number, amount?: number): number',
+      description: 'Sample rate reduction distortion.',
+      parameters: [
+        'input: The input signal.',
+        'amount: The waveshaping amount (1-10).',
+      ],
+    },
+  ],
+  dynamics: [
+    {
+      name: 'compressor',
+      signature:
+        'compressor(input: number, threshold?: number, ratio?: number, attack?: number, release?: number, knee?: number): number',
+      description: 'Dynamic range compressor.',
+      parameters: [
+        'input: The input signal.',
+        'threshold: The threshold in dB (-60 to 0).',
+        'ratio: The compression ratio (1-20).',
+        'attack: The attack time in seconds (0.001-1).',
+        'release: The release time in seconds (0.001-1).',
+        'knee: The knee width in dB (0-40).',
+      ],
+    },
+    {
+      name: 'expander',
+      signature:
+        'expander(input: number, threshold?: number, ratio?: number, attack?: number, release?: number, knee?: number): number',
+      description: 'Dynamic range expander.',
+      parameters: [
+        'input: The input signal.',
+        'threshold: The threshold in dB (-60 to 0).',
+        'ratio: The expansion ratio (1-20).',
+        'attack: The attack time in seconds (0.001-1).',
+        'release: The release time in seconds (0.001-1).',
+        'knee: The knee width in dB (0-40).',
+      ],
+    },
+    {
+      name: 'gate',
+      signature:
+        'gate(input: number, threshold?: number, attack?: number, release?: number, hold?: number, range?: number): number',
+      description: 'Noise gate.',
+      parameters: [
+        'input: The input signal.',
+        'threshold: The threshold in dB (-60 to 0).',
+        'attack: The attack time in seconds (0.001-1).',
+        'release: The release time in seconds (0.001-1).',
+        'hold: The hold time in seconds (0-2).',
+        'range: The gate range in dB (-60 to 0).',
+      ],
+    },
+  ],
+  utilities: [
+    {
+      name: 'log',
+      signature: 'log(...args: any[]): void',
+      description: 'Writes to the console.',
+      parameters: [
+        'args: The arguments to log.',
+      ],
+    },
+  ],
+}
+
+function createComponentHTML(component) {
+  return `
+    <div class="function-item" data-function-name="${component.name}">
+      <div class="function-name">${component.name}</div>
+      <div class="function-signature">${component.signature}</div>
+    </div>
+  `
+}
+
+function populateHelpContent() {
+  let html = ''
+
+  for (const [sectionName, components] of Object.entries(componentData)) {
+    const sectionTitle = sectionName.charAt(0).toUpperCase() + sectionName.slice(1)
+    html += `
+      <div class="component-section">
+        <h3 class="section-title">${sectionTitle}</h3>
+        <div class="functions-grid">
+          ${components.map(createComponentHTML).join('')}
+        </div>
+      </div>
+    `
+  }
+
+  helpContent.innerHTML = html
+
+  // Initialize Popper.js for all tooltips
+  const functionItems = helpContent.querySelectorAll('.function-item')
+  functionItems.forEach(item => {
+    const functionName = item.dataset.functionName
+    const component = findComponentByName(functionName)
+
+    if (component) {
+      // Create tooltip element and append to body
+      const tooltip = document.createElement('div')
+      tooltip.className = 'function-tooltip'
+      tooltip.setAttribute('role', 'tooltip')
+
+      const parametersHTML = component.parameters.length > 0
+        ? `<div class="tooltip-parameters">${
+          component.parameters.map(p => `<div class="tooltip-parameter">• ${p}</div>`).join('')
+        }</div>`
+        : ''
+
+      tooltip.innerHTML = `
+        <div class="tooltip-description">${component.description}</div>
+        ${parametersHTML}
+        <div class="tooltip-arrow" data-popper-arrow></div>
+      `
+
+      document.body.appendChild(tooltip)
+
+      const popperInstance = createPopper(item, tooltip, {
+        placement: 'top',
+        modifiers: [
+          {
+            name: 'offset',
+            options: {
+              offset: [0, 8],
+            },
+          },
+          {
+            name: 'preventOverflow',
+            options: {
+              boundary: 'viewport',
+            },
+          },
+        ],
+      })
+
+      // Show tooltip on hover
+      item.addEventListener('mouseenter', () => {
+        tooltip.style.opacity = '1'
+        tooltip.style.visibility = 'visible'
+        popperInstance.update()
+      })
+
+      // Hide tooltip on leave
+      item.addEventListener('mouseleave', () => {
+        tooltip.style.opacity = '0'
+        tooltip.style.visibility = 'hidden'
+      })
+    }
+  })
+}
+
+function findComponentByName(name) {
+  for (const components of Object.values(componentData)) {
+    const found = components.find(comp => comp.name === name)
+    if (found) return found
+  }
+  return null
+}
+
+function showHelp() {
+  helpModal.classList.add('show')
+  populateHelpContent()
+}
+
+function hideHelp() {
+  helpModal.classList.remove('show')
+}
+
+// Help modal event listeners
+helpBtn.addEventListener('click', showHelp)
+closeHelp.addEventListener('click', hideHelp)
+
+// Close modal when clicking outside
+helpModal.addEventListener('click', (e) => {
+  if (e.target === helpModal) {
+    hideHelp()
+  }
+})
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && helpModal.classList.contains('show')) {
+    hideHelp()
+  }
 })
