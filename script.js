@@ -471,7 +471,7 @@ loader.init().then(monaco => {
      * @param {number} offset The time offset to drift from.
      * @returns {boolean} true When phase resets, false otherwise
      */
-    declare function sync(period: number, offset?: number): number
+    declare function sync(period: number, offset?: number): boolean
     /** Low pass filter.
      * @param {number} input The input signal.
      * @param {number} cut The cutoff frequency.
@@ -745,33 +745,6 @@ loader.init().then(monaco => {
       delay: 300,
       sticky: false,
     },
-    suggest: {
-      showMethods: true,
-      showFunctions: true,
-      showConstructors: true,
-      showFields: true,
-      showVariables: true,
-      showClasses: true,
-      showStructs: true,
-      showInterfaces: true,
-      showModules: true,
-      showProperties: true,
-      showEvents: true,
-      showOperators: true,
-      showUnits: true,
-      showValues: true,
-      showConstants: true,
-      showEnums: true,
-      showEnumMembers: true,
-      showKeywords: true,
-      showWords: true,
-      showColors: true,
-      showFiles: true,
-      showReferences: true,
-      showFolders: true,
-      showTypeParameters: true,
-      showSnippets: true,
-    },
     quickSuggestions: {
       other: true,
       comments: false,
@@ -782,33 +755,6 @@ loader.init().then(monaco => {
     acceptSuggestionOnEnter: 'on',
     tabCompletion: 'on',
     wordBasedSuggestions: true,
-    suggest: {
-      showMethods: true,
-      showFunctions: true,
-      showConstructors: true,
-      showFields: true,
-      showVariables: true,
-      showClasses: true,
-      showStructs: true,
-      showInterfaces: true,
-      showModules: true,
-      showProperties: true,
-      showEvents: true,
-      showOperators: true,
-      showUnits: true,
-      showValues: true,
-      showConstants: true,
-      showEnums: true,
-      showEnumMembers: true,
-      showKeywords: true,
-      showWords: true,
-      showColors: true,
-      showFiles: true,
-      showReferences: true,
-      showFolders: true,
-      showTypeParameters: true,
-      showSnippets: true,
-    },
   })
 
   window.addEventListener('resize', () => {
