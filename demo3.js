@@ -1,11 +1,3 @@
-export const demo3 = `// Dattorro reverb demo with different parameters
-const freq = 220 + sin(0.1) * 100
-const input = sin(freq) * 0.2
-
-// Try different reverb settings:
-// - High diffusion for more realistic reverb
-// - Medium damping for natural decay
-// - High decay for longer tail
-// - Moderate wet mix
-out = reverb(input, 0.8, 0.7, 0.6, 0.8, 0.5)
+export const demo3 =
+  `out = lp('i iii vii v'.chords('dorian').pick(saw(1/8,sync(16)).o1).chord(saw,5,sync(1/4))*exp(1/4,10)*0.1,2000+sin(.1)*1500,1.25)
 `

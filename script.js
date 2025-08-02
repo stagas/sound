@@ -30,6 +30,13 @@ Array.prototype.pick = function(value) {
   return this[clamp(index, 0, this.length - 1)]
 }
 
+Array.prototype.chord = function(oscillator, octave = 0, sync = false) {
+  return this.reduce((sum, semitone) => {
+    const freq = (semitone + (octave * 12)).ntof
+    return sum + oscillator(freq, sync)
+  }, 0)
+}
+
 Object.defineProperty(Number.prototype, 'o1', {
   get: function() {
     return this * 0.5 + 0.5
@@ -83,6 +90,51 @@ Object.defineProperty(String.prototype, 'notes', {
     }).filter(note => note !== null)
   },
 })
+
+String.prototype.chords = function(scale) {
+  const scaleMap = {
+    'major': [0, 2, 4, 5, 7, 9, 11],
+    'minor': [0, 2, 3, 5, 7, 8, 10],
+    'dorian': [0, 2, 3, 5, 7, 9, 10],
+    'phrygian': [0, 1, 3, 5, 7, 8, 10],
+    'lydian': [0, 2, 4, 6, 7, 9, 11],
+    'mixolydian': [0, 2, 4, 5, 7, 9, 10],
+    'locrian': [0, 1, 3, 5, 6, 8, 10],
+    'harmonic-minor': [0, 2, 3, 5, 7, 8, 11],
+    'melodic-minor': [0, 2, 3, 5, 7, 9, 11],
+    'pentatonic-major': [0, 2, 4, 7, 9],
+    'pentatonic-minor': [0, 3, 5, 7, 10],
+  }
+
+  const scaleDegrees = scaleMap[scale.toLowerCase()]
+  if (!scaleDegrees) {
+    throw new Error(`Unknown scale: ${scale}`)
+  }
+
+  const chordQualities = {
+    'i': [0, 2, 4], // minor in dorian
+    'ii': [1, 3, 5], // minor in dorian
+    'iii': [2, 4, 6], // major in dorian
+    'iv': [3, 5, 7], // major in dorian
+    'v': [4, 6, 8], // minor in dorian
+    'vi': [5, 7, 9], // diminished in dorian
+    'vii': [6, 8, 10], // minor in dorian
+    'I': [0, 2, 4], // major
+    'II': [1, 3, 5], // major
+    'III': [2, 4, 6], // major
+    'IV': [3, 5, 7], // major
+    'V': [4, 6, 8], // major
+    'VI': [5, 7, 9], // major
+    'VII': [6, 8, 10], // major
+  }
+
+  return this.trim().split(/\s+/).map(chord => {
+    const quality = chordQualities[chord.toLowerCase()]
+    if (!quality) return null
+
+    return quality.map(degree => scaleDegrees[degree % scaleDegrees.length])
+  }).filter(chord => chord !== null)
+}
 
 Number.prototype.mul = function(other = 0) {
   return this * other
@@ -679,6 +731,14 @@ loader.init().then(monaco => {
        * @returns {T} The picked value.
        */
       pick(value: number): T
+      /** Converts semitone arrays to oscillator outputs and sums them.
+       * @param {function} oscillator The oscillator function to use (e.g., sin, saw, sqr).
+       * @param {number} octave The octave to transpose to (defaults to 0).
+       * @param {boolean} sync Reset phase when true (defaults to false).
+       * @returns {number} The summed output of all oscillators.
+       * @example [0,2,4].chord(sin, 4, true) returns the sum of 3 synced oscillators
+       */
+      chord(oscillator: (freq: number, sync?: boolean) => number, octave?: number, sync?: boolean): number
     }
 
     interface Number {
@@ -705,6 +765,12 @@ loader.init().then(monaco => {
        * @example 'c c# d d# g2 a3 a#3'.notes returns [0, 1, 2, 3, 7, 9, 10]
        */
       readonly notes: number[]
+      /** Parses a string of chord progressions and returns an array of chord arrays.
+       * @param {string} scale The scale to use (e.g., 'dorian', 'major', 'minor').
+       * @returns {number[][]} Array of chord arrays, each containing semitone numbers.
+       * @example 'i iv iii v'.chords('dorian') returns [[0,2,4], [3,5,7], [2,4,6], [4,6,8]]
+       */
+      chords(scale: string): number[][]
     }
 
     /** Writes to the console.
@@ -1257,6 +1323,16 @@ const componentData = {
       ],
     },
     {
+      name: 'Array.chord',
+      signature: 'array.chord(oscillator: function, octave?: number, sync?: boolean): number',
+      description: 'Converts semitone arrays to oscillator outputs and sums them.',
+      parameters: [
+        'oscillator: The oscillator function to use (e.g., sin, saw, sqr).',
+        'octave: The octave to transpose to (defaults to 0).',
+        'sync: Reset phase when true (defaults to false).',
+      ],
+    },
+    {
       name: 'Number.o1',
       signature: 'number.o1: number',
       description: 'Scales a -1..1 value to 0..1 range.',
@@ -1279,6 +1355,14 @@ const componentData = {
       signature: 'string.notes: number[]',
       description: 'Parses a string of notes and returns an array of semitone numbers.',
       parameters: [],
+    },
+    {
+      name: 'String.chords',
+      signature: 'string.chords(scale: string): number[][]',
+      description: 'Parses a string of chord progressions and returns an array of chord arrays.',
+      parameters: [
+        'scale: The scale to use (e.g., "dorian", "major", "minor").',
+      ],
     },
     {
       name: 'Number.mul',
