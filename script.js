@@ -1,10 +1,19 @@
 import loader from 'https://esm.sh/@monaco-editor/loader'
 import { Biquad } from './biquad.js'
+import { Compressor } from './compressor.js'
+import { Delay } from './delay.js'
 import { demo } from './demo.js'
 import { demo2 } from './demo2.js'
+import { demo3 } from './demo3.js'
+import { demo4 } from './demo4.js'
+import { demo5 } from './demo5.js'
+import { Expander } from './expander.js'
+import { Gate } from './gate.js'
 import { Sin } from './osc.js'
 import { PolyBlepOscillator } from './polyblep-oscillator.js'
+import { DattorroReverb } from './reverb.js'
 import { clamp } from './util.js'
+import { Waveshaper } from './waveshaper.js'
 
 const g = window.globalThis
 g.out = 0
@@ -148,6 +157,131 @@ g.pk = createBiquad('Peaking')
 g.ls = createBiquad('LowShelf')
 g.hs = createBiquad('HighShelf')
 
+let delays_i = 0
+const delays = []
+function delay(input, time, feedback, wet) {
+  let delay
+  if (delays_i >= delays.length) {
+    delays.push(delay = new Delay())
+  }
+  else {
+    delay = delays[delays_i]
+  }
+  delay.setDelayTime(time)
+  delay.setFeedback(feedback)
+  delay.setWet(wet)
+  delays_i++
+  return delay.processSample(input)
+}
+g.delay = delay
+
+let reverbs_i = 0
+const reverbs = []
+function reverb(input, diffusion1, diffusion2, damping, decay, wet) {
+  let reverb
+  if (reverbs_i >= reverbs.length) {
+    reverbs.push(reverb = new DattorroReverb(sampleRate))
+  }
+  else {
+    reverb = reverbs[reverbs_i]
+  }
+  reverb.setDiffusion1(diffusion1)
+  reverb.setDiffusion2(diffusion2)
+  reverb.setDamping(damping)
+  reverb.setDecay(decay)
+  reverb.setWet(wet)
+  reverbs_i++
+  return reverb.processSample(input)
+}
+g.reverb = reverb
+
+let waveshapers_i = 0
+const waveshapers = []
+function createWaveshaper(type) {
+  return function(input, amount) {
+    let waveshaper
+    if (waveshapers_i >= waveshapers.length) {
+      waveshapers.push(waveshaper = new Waveshaper())
+    }
+    else {
+      waveshaper = waveshapers[waveshapers_i]
+    }
+    waveshaper.setAmount(amount || 1)
+    waveshapers_i++
+    return waveshaper.processSample(input, type)
+  }
+}
+g.tanh = createWaveshaper('tanh')
+g.atan = createWaveshaper('atan')
+g.cubic = createWaveshaper('cubic')
+g.soft = createWaveshaper('softClip')
+g.hard = createWaveshaper('hardClip')
+g.fold = createWaveshaper('fold')
+g.cheb = createWaveshaper('chebyshev')
+g.crush = createWaveshaper('bitCrush')
+g.reduce = createWaveshaper('sampleRateReduce')
+
+// Dynamic components
+let compressors_i = 0
+const compressors = []
+function compressor(input, threshold, ratio, attack, release, knee) {
+  let comp
+  if (compressors_i >= compressors.length) {
+    compressors.push(comp = new Compressor())
+  }
+  else {
+    comp = compressors[compressors_i]
+  }
+  comp.setThreshold(threshold || -24)
+  comp.setRatio(ratio || 4)
+  comp.setAttack(attack || 0.003)
+  comp.setRelease(release || 0.25)
+  comp.setKnee(knee || 0)
+  compressors_i++
+  return comp.processSample(input)
+}
+g.compressor = compressor
+
+let expanders_i = 0
+const expanders = []
+function expander(input, threshold, ratio, attack, release, knee) {
+  let exp
+  if (expanders_i >= expanders.length) {
+    expanders.push(exp = new Expander())
+  }
+  else {
+    exp = expanders[expanders_i]
+  }
+  exp.setThreshold(threshold || -24)
+  exp.setRatio(ratio || 2)
+  exp.setAttack(attack || 0.003)
+  exp.setRelease(release || 0.25)
+  exp.setKnee(knee || 0)
+  expanders_i++
+  return exp.processSample(input)
+}
+g.expander = expander
+
+let gates_i = 0
+const gates = []
+function gate(input, threshold, attack, release, hold, range) {
+  let g
+  if (gates_i >= gates.length) {
+    gates.push(g = new Gate())
+  }
+  else {
+    g = gates[gates_i]
+  }
+  g.setThreshold(threshold || -24)
+  g.setAttack(attack || 0.003)
+  g.setRelease(release || 0.25)
+  g.setHold(hold || 0.1)
+  g.setRange(range || -60)
+  gates_i++
+  return g.processSample(input)
+}
+g.gate = gate
+
 let t = 0
 let n = 0
 let fn = function() {}
@@ -276,6 +410,12 @@ script.onaudioprocess = function(e) {
     sines_i =
       polybleps_i =
       biquads_i =
+      delays_i =
+      reverbs_i =
+      waveshapers_i =
+      compressors_i =
+      expanders_i =
+      gates_i =
         0
 
     t = n / sampleRate
@@ -391,6 +531,110 @@ loader.init().then(monaco => {
      * @returns {number} The output sample.
      */
     declare function hs(input: number, cut: number, res: number): number
+    /** Delay with cubic interpolation.
+     * @param {number} input The input signal.
+     * @param {number} time The delay time in seconds.
+     * @param {number} feedback The feedback amount (0-0.99).
+     * @param {number} wet The wet mix amount (0-1).
+     * @returns {number} The output sample.
+     */
+    declare function delay(input: number, time: number, feedback: number, wet: number): number
+
+    /** Dattorro reverb effect.
+     * @param {number} input The input signal.
+     * @param {number} diffusion1 The first diffusion amount (0-1).
+     * @param {number} diffusion2 The second diffusion amount (0-1).
+     * @param {number} damping The damping amount (0-1).
+     * @param {number} decay The decay amount (0-0.99).
+     * @param {number} wet The wet mix amount (0-1).
+     * @returns {number} The output sample.
+     */
+    declare function reverb(input: number, diffusion1: number, diffusion2: number, damping: number, decay: number, wet: number): number
+
+    /** Tanh waveshaping for soft saturation.
+     * @param {number} input The input signal.
+     * @param {number} amount The waveshaping amount (1-10).
+     * @returns {number} The output sample.
+     */
+    declare function tanh(input: number, amount?: number): number
+    /** Arctangent waveshaping for hard saturation.
+     * @param {number} input The input signal.
+     * @param {number} amount The waveshaping amount (1-10).
+     * @returns {number} The output sample.
+     */
+    declare function atan(input: number, amount?: number): number
+    /** Cubic waveshaping for asymmetric distortion.
+     * @param {number} input The input signal.
+     * @param {number} amount The waveshaping amount (1-10).
+     * @returns {number} The output sample.
+     */
+    declare function cubic(input: number, amount?: number): number
+    /** Soft clipping waveshaping.
+     * @param {number} input The input signal.
+     * @param {number} amount The waveshaping amount (1-10).
+     * @returns {number} The output sample.
+     */
+    declare function soft(input: number, amount?: number): number
+    /** Hard clipping waveshaping.
+     * @param {number} input The input signal.
+     * @param {number} amount The waveshaping amount (1-10).
+     * @returns {number} The output sample.
+     */
+    declare function hard(input: number, amount?: number): number
+    /** Wave folding distortion.
+     * @param {number} input The input signal.
+     * @param {number} amount The waveshaping amount (1-10).
+     * @returns {number} The output sample.
+     */
+    declare function fold(input: number, amount?: number): number
+    /** Chebyshev harmonic distortion.
+     * @param {number} input The input signal.
+     * @param {number} amount The waveshaping amount (1-10).
+     * @returns {number} The output sample.
+     */
+    declare function cheb(input: number, amount?: number): number
+    /** Bit crusher distortion.
+     * @param {number} input The input signal.
+     * @param {number} amount The waveshaping amount (1-10).
+     * @returns {number} The output sample.
+     */
+    declare function crush(input: number, amount?: number): number
+    /** Sample rate reduction distortion.
+     * @param {number} input The input signal.
+     * @param {number} amount The waveshaping amount (1-10).
+     * @returns {number} The output sample.
+     */
+    declare function reduce(input: number, amount?: number): number
+    /** Dynamic range compressor.
+     * @param {number} input The input signal.
+     * @param {number} threshold The threshold in dB (-60 to 0).
+     * @param {number} ratio The compression ratio (1-20).
+     * @param {number} attack The attack time in seconds (0.001-1).
+     * @param {number} release The release time in seconds (0.001-1).
+     * @param {number} knee The knee width in dB (0-40).
+     * @returns {number} The output sample.
+     */
+    declare function compressor(input: number, threshold?: number, ratio?: number, attack?: number, release?: number, knee?: number): number
+    /** Dynamic range expander.
+     * @param {number} input The input signal.
+     * @param {number} threshold The threshold in dB (-60 to 0).
+     * @param {number} ratio The expansion ratio (1-20).
+     * @param {number} attack The attack time in seconds (0.001-1).
+     * @param {number} release The release time in seconds (0.001-1).
+     * @param {number} knee The knee width in dB (0-40).
+     * @returns {number} The output sample.
+     */
+    declare function expander(input: number, threshold?: number, ratio?: number, attack?: number, release?: number, knee?: number): number
+    /** Noise gate.
+     * @param {number} input The input signal.
+     * @param {number} threshold The threshold in dB (-60 to 0).
+     * @param {number} attack The attack time in seconds (0.001-1).
+     * @param {number} release The release time in seconds (0.001-1).
+     * @param {number} hold The hold time in seconds (0-2).
+     * @param {number} range The gate range in dB (-60 to 0).
+     * @returns {number} The output sample.
+     */
+    declare function gate(input: number, threshold?: number, attack?: number, release?: number, hold?: number, range?: number): number
 
     interface Array<T> {
       /** Pick a value from an array.
@@ -440,6 +684,131 @@ loader.init().then(monaco => {
     scrollbar: {
       alwaysConsumeMouseWheel: false,
     },
+    parameterHints: {
+      enabled: true,
+      cycle: true,
+      showMethods: true,
+      showFunctions: true,
+      showConstructors: true,
+      showFields: true,
+      showVariables: true,
+      showClasses: true,
+      showStructs: true,
+      showInterfaces: true,
+      showModules: true,
+      showProperties: true,
+      showEvents: true,
+      showOperators: true,
+      showUnits: true,
+      showValues: true,
+      showConstants: true,
+      showEnums: true,
+      showEnumMembers: true,
+      showKeywords: true,
+      showWords: true,
+      showColors: true,
+      showFiles: true,
+      showReferences: true,
+      showFolders: true,
+      showTypeParameters: true,
+      showSnippets: true,
+    },
+    suggest: {
+      showMethods: true,
+      showFunctions: true,
+      showConstructors: true,
+      showFields: true,
+      showVariables: true,
+      showClasses: true,
+      showStructs: true,
+      showInterfaces: true,
+      showModules: true,
+      showProperties: true,
+      showEvents: true,
+      showOperators: true,
+      showUnits: true,
+      showValues: true,
+      showConstants: true,
+      showEnums: true,
+      showEnumMembers: true,
+      showKeywords: true,
+      showWords: true,
+      showColors: true,
+      showFiles: true,
+      showReferences: true,
+      showFolders: true,
+      showTypeParameters: true,
+      showSnippets: true,
+    },
+    hover: {
+      enabled: true,
+      delay: 300,
+      sticky: false,
+    },
+    suggest: {
+      showMethods: true,
+      showFunctions: true,
+      showConstructors: true,
+      showFields: true,
+      showVariables: true,
+      showClasses: true,
+      showStructs: true,
+      showInterfaces: true,
+      showModules: true,
+      showProperties: true,
+      showEvents: true,
+      showOperators: true,
+      showUnits: true,
+      showValues: true,
+      showConstants: true,
+      showEnums: true,
+      showEnumMembers: true,
+      showKeywords: true,
+      showWords: true,
+      showColors: true,
+      showFiles: true,
+      showReferences: true,
+      showFolders: true,
+      showTypeParameters: true,
+      showSnippets: true,
+    },
+    quickSuggestions: {
+      other: true,
+      comments: false,
+      strings: false,
+    },
+    suggestOnTriggerCharacters: true,
+    acceptSuggestionOnCommitCharacter: true,
+    acceptSuggestionOnEnter: 'on',
+    tabCompletion: 'on',
+    wordBasedSuggestions: true,
+    suggest: {
+      showMethods: true,
+      showFunctions: true,
+      showConstructors: true,
+      showFields: true,
+      showVariables: true,
+      showClasses: true,
+      showStructs: true,
+      showInterfaces: true,
+      showModules: true,
+      showProperties: true,
+      showEvents: true,
+      showOperators: true,
+      showUnits: true,
+      showValues: true,
+      showConstants: true,
+      showEnums: true,
+      showEnumMembers: true,
+      showKeywords: true,
+      showWords: true,
+      showColors: true,
+      showFiles: true,
+      showReferences: true,
+      showFolders: true,
+      showTypeParameters: true,
+      showSnippets: true,
+    },
   })
 
   window.addEventListener('resize', () => {
@@ -462,11 +831,43 @@ loader.init().then(monaco => {
   editor.onDidChangeModelContent(compile)
   compile()
 
+  // Force parameter hints to show when cursor moves inside function calls
+  editor.onDidChangeCursorPosition((e) => {
+    const model = editor.getModel()
+    const position = e.position
+    const lineContent = model.getLineContent(position.lineNumber)
+    const char = lineContent.charAt(position.column - 1)
+
+    // If cursor is inside parentheses, trigger parameter hints
+    if (char === '(' || char === ',' || char === ' ') {
+      const word = model.getWordAtPosition(position)
+      if (word) {
+        // Trigger parameter hints
+        editor.trigger('keyboard', 'editor.action.triggerParameterHints', {})
+      }
+    }
+  })
+
   // Demo picker functionality
   const demoPicker = document.getElementById('demoPicker')
 
   function loadDemo(demoName) {
-    const demoContent = demoName === 'demo2' ? demo2 : demo
+    let demoContent
+    if (demoName === 'demo2') {
+      demoContent = demo2
+    }
+    else if (demoName === 'demo3') {
+      demoContent = demo3
+    }
+    else if (demoName === 'demo4') {
+      demoContent = demo4
+    }
+    else if (demoName === 'demo5') {
+      demoContent = demo5
+    }
+    else {
+      demoContent = demo
+    }
     editor.setValue(demoContent)
     localStorage.setItem('code', demoContent)
     compile()
