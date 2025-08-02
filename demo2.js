@@ -7,7 +7,7 @@ export const demo2 = `const piano = x =>
 
 const piano_env = exp(1/4, 10)
 const piano_snd = lp(
-    piano('c a f e'.notes.pick(saw(1, sync(1)).w).oct(4).ntof)
+    piano('c a f e'.notes.pick(saw(1, sync(1)).w).ntof(3))
   , 1000 + 900 * piano_env, .5) * piano_env
 
 out = piano_snd

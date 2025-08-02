@@ -30,11 +30,14 @@ Array.prototype.pick = function(value) {
   return this[clamp(index, 0, this.length - 1)]
 }
 
-Array.prototype.chord = function(oscillator, octave = 0, ...rest) {
-  return this.reduce((sum, semitone) => {
-    const freq = (semitone + (octave * 12)).ntof
+Array.prototype.chord = function(oscillator, ...rest) {
+  return this.reduce((sum, freq) => {
     return sum + oscillator(freq, ...rest)
   }, 0)
+}
+
+Array.prototype.ntof = function(octave = 0) {
+  return this.map(semitone => semitone.ntof(octave))
 }
 
 Object.defineProperty(Number.prototype, 'o1', {
@@ -49,11 +52,9 @@ Object.defineProperty(Number.prototype, 'w', {
   },
 })
 
-Object.defineProperty(Number.prototype, 'ntof', {
-  get: function() {
-    return 440 * Math.pow(2, (this - 69) / 12)
-  },
-})
+Number.prototype.ntof = function(octave = 0) {
+  return 16.35 * Math.pow(2, (this + (octave * 12)) / 12)
+}
 
 Object.defineProperty(String.prototype, 'notes', {
   get: function() {
@@ -150,10 +151,6 @@ Number.prototype.sub = function(other = 0) {
 
 Number.prototype.div = function(other = 0) {
   return this / other
-}
-
-Number.prototype.oct = function(other = 0) {
-  return this + (12 * other)
 }
 
 function sync(period, offset = 0) {
@@ -753,14 +750,17 @@ loader.init().then(monaco => {
        * @returns {T} The picked value.
        */
       pick(value: number): T
-      /** Converts semitone arrays to oscillator outputs and sums them.
+      /** Plays the frequencies in the array with the oscillator in a chord.
        * @param {function} oscillator The oscillator function to use (e.g., sin, saw, sqr).
-       * @param {number} octave The octave to transpose to (defaults to 0).
-       * @param {boolean} sync Reset phase when true (defaults to false).
+       * @param {...any} rest Rest of the arguments to pass to the oscillator.
        * @returns {number} The summed output of all oscillators.
-       * @example [0,2,4].chord(sin, 4, true) returns the sum of 3 synced oscillators
        */
-      chord(oscillator: (freq: number, sync?: boolean) => number, octave?: number, sync?: boolean): number
+      chord(oscillator: (freq: number, ...rest: any[]) => number, ...rest: any[]): number
+      /** Converts semitone numbers in the array to frequencies. Octave 0 corresponds to C0 (16.35 Hz).
+       * @param {number} octave The octave to transpose to (defaults to 0). C0 is octave 0.
+       * @returns {number[]} Array of frequencies.
+       */
+      ntof(octave?: number): number[]
     }
 
     interface Number {
@@ -768,8 +768,8 @@ loader.init().then(monaco => {
       readonly o1: number
       /** Folds a -1..1 value to 0..1 */
       readonly w: number
-      /** Converts a semitone number to a frequency. */
-      readonly ntof: number
+      /** Converts a semitone number to a frequency. Octave 0 corresponds to C0 (16.35 Hz). */
+      ntof(octave?: number): number
       /** Multiplies a number by another. */
       mul(other?: number): number
       /** Adds a number to another. */
@@ -778,8 +778,7 @@ loader.init().then(monaco => {
       sub(other?: number): number
       /** Divides a number by another. */
       div(other?: number): number
-      /** Number of octaves to add to a semitone number. */
-      oct(octaves?: number): number
+
     }
 
     interface String {
@@ -1346,12 +1345,19 @@ const componentData = {
     },
     {
       name: 'Array.chord',
-      signature: 'array.chord(oscillator: function, octave?: number, sync?: boolean): number',
-      description: 'Converts semitone arrays to oscillator outputs and sums them.',
+      signature: 'array.chord(oscillator: function, ...rest?: any): number',
+      description: 'Plays the frequencies in the array with the oscillator in a chord.',
       parameters: [
         'oscillator: The oscillator function to use (e.g., sin, saw, sqr).',
-        'octave: The octave to transpose to (defaults to 0).',
-        'sync: Reset phase when true (defaults to false).',
+        '...rest: Rest of the arguments to pass to the oscillator.',
+      ],
+    },
+    {
+      name: 'Array.ntof',
+      signature: 'array.ntof(octave?: number): number[]',
+      description: 'Converts semitone numbers in the array to frequencies. Octave 0 corresponds to C0 (16.35 Hz).',
+      parameters: [
+        'octave: The octave to transpose to (defaults to 0). C0 is octave 0.',
       ],
     },
     {
@@ -1368,9 +1374,11 @@ const componentData = {
     },
     {
       name: 'Number.ntof',
-      signature: 'number.ntof: number',
-      description: 'Converts a semitone number to a frequency.',
-      parameters: [],
+      signature: 'number.ntof(octave?: number): number',
+      description: 'Converts a semitone number to a frequency. Octave 0 corresponds to C0 (16.35 Hz).',
+      parameters: [
+        'octave: The octave to transpose to (defaults to 0). C0 is octave 0.',
+      ],
     },
     {
       name: 'String.notes',
@@ -1416,14 +1424,6 @@ const componentData = {
       description: 'Divides a number by another.',
       parameters: [
         'other: The number to divide by (defaults to 0).',
-      ],
-    },
-    {
-      name: 'Number.oct',
-      signature: 'number.oct(octaves?: number): number',
-      description: 'Adds octaves to a semitone number.',
-      parameters: [
-        'octaves: The number of octaves to add (defaults to 0).',
       ],
     },
   ],
