@@ -1,5 +1,6 @@
 import loader from 'https://esm.sh/@monaco-editor/loader'
 import { Biquad } from './biquad.js'
+import { demo } from './demo.js'
 import { PolyBlepOscillator } from './polyblep-oscillator.js'
 import { Sin } from './sin.js'
 import { clamp } from './util.js'
@@ -277,7 +278,7 @@ loader.init().then(monaco => {
   monaco.editor.createModel(libSource, 'typescript', monaco.Uri.parse(libUri))
   monaco.editor.setTheme('vs-dark')
   const editor = monaco.editor.create(document.getElementById('editor'), {
-    value: localStorage.getItem('code') || '',
+    value: localStorage.getItem('code') || demo,
     language: 'javascript',
     minimap: {
       enabled: false,
