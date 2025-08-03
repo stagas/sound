@@ -10,6 +10,7 @@ import { demo3 } from './demo3.js'
 import { demo4 } from './demo4.js'
 import { demo5 } from './demo5.js'
 import { demo6 } from './demo6.js'
+import { demo7 } from './demo7.js'
 import { Expander } from './expander.js'
 import { Gate } from './gate.js'
 import './help.js'
@@ -533,8 +534,47 @@ function adv(step, trigger) {
 }
 g.adv = adv
 
+class Bpm {
+  constructor() {
+    this.bpm = 120
+    this.multiplier = 1
+  }
+
+  setBpm(bpm) {
+    this.bpm = bpm
+    // Convert BPM to time multiplier
+    // At 120 BPM, 1 beat = 0.5 seconds, so we want t to advance at normal speed
+    // At 60 BPM, 1 beat = 1 second, so we want t to advance at half speed
+    // At 240 BPM, 1 beat = 0.25 seconds, so we want t to advance at double speed
+    this.multiplier = bpm / 120
+    // Store the multiplier globally so it can be used in time calculation
+    g.bpmMultiplier = this.multiplier
+  }
+
+  processSample() {
+    return this.multiplier
+  }
+}
+
+let bpms_i = 0
+const bpms = []
+function bpm(bpmValue) {
+  let bpm
+  if (bpms_i >= bpms.length) {
+    bpms.push(bpm = new Bpm())
+  }
+  else {
+    bpm = bpms[bpms_i]
+  }
+  bpm.setBpm(bpmValue)
+  bpms_i++
+  return bpm.processSample()
+}
+g.bpm = bpm
+
 g.t = 0
 g.f = 0
+g.bpmMultiplier = 1
 let fn = function() {}
 
 const ctx = new AudioContext()
@@ -671,9 +711,10 @@ script.onaudioprocess = function(e) {
       crosses_i =
       advs_i =
       karplus_i =
+      bpms_i =
         0
 
-    g.t = g.f / sampleRate
+    g.t = (g.f / sampleRate) * g.bpmMultiplier
     g.f++
 
     fn()
@@ -917,6 +958,11 @@ loader.init().then(monaco => {
      * @returns {number} Current value (0..1).
      */
     declare function adv(step: number, trigger: boolean): number
+    /** Sets the tempo in BPM and returns a time multiplier.
+     * @param {number} bpm The tempo in beats per minute.
+     * @returns {number} Time multiplier (1.0 = normal speed, 2.0 = double speed, 0.5 = half speed).
+     */
+    declare function bpm(bpm: number): number
 
     interface Array<T> {
       /** Pick a value from an array.
@@ -1083,7 +1129,7 @@ loader.init().then(monaco => {
     const code = editor.getValue()
     localStorage.setItem('code', code)
     try {
-      fn = new Function(code)
+      fn = new Function('bpm(120);' + code)
       log('')
     }
     catch (e) {
@@ -1122,6 +1168,7 @@ loader.init().then(monaco => {
     demo4,
     demo5,
     demo6,
+    demo7,
   }
   function loadDemo(demoName) {
     const demoContent = demos[demoName]
@@ -1160,6 +1207,7 @@ function stop() {
   isStopped = true
   g.t = 0
   g.f = 0
+  g.bpmMultiplier = 1
   updatePlayButton()
 }
 
