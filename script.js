@@ -11,6 +11,7 @@ import { demo4 } from './demo4.js'
 import { demo5 } from './demo5.js'
 import { demo6 } from './demo6.js'
 import { demo7 } from './demo7.js'
+import { demo8 } from './demo8.js'
 import { Expander } from './expander.js'
 import { Gate } from './gate.js'
 import './help.js'
@@ -158,8 +159,51 @@ Number.prototype.div = function(other = 0) {
   return this / other
 }
 
+class Sync {
+  constructor() {
+    this.period = 1
+    this.offset = 0
+    this.previousPhase = 0
+  }
+
+  setPeriod(period) {
+    this.period = period
+  }
+
+  setOffset(offset) {
+    this.offset = offset
+  }
+
+  reset() {
+    this.previousPhase = 0
+  }
+
+  processSample() {
+    const currentPhase = (t + this.offset) % this.period
+    const previousPhase = this.previousPhase
+
+    // Detect crossing the period boundary (when phase wraps from high to low)
+    const crossed = previousPhase > currentPhase && previousPhase > this.period * 0.5
+
+    this.previousPhase = currentPhase
+    return crossed
+  }
+}
+
+let syncs_i = 0
+const syncs = []
 function sync(period, offset = 0) {
-  return (t + offset) % period < 0.0000001
+  let sync
+  if (syncs_i >= syncs.length) {
+    syncs.push(sync = new Sync())
+  }
+  else {
+    sync = syncs[syncs_i]
+  }
+  sync.setPeriod(period)
+  sync.setOffset(offset)
+  syncs_i++
+  return sync.processSample()
 }
 g.sync = sync
 
@@ -712,6 +756,7 @@ script.onaudioprocess = function(e) {
       advs_i =
       karplus_i =
       bpms_i =
+      syncs_i =
         0
 
     g.t = (g.f / sampleRate) * g.bpmMultiplier
@@ -765,7 +810,7 @@ loader.init().then(monaco => {
     /** Used to sync the phase of an oscillator.
      * @param {number} period The period to sync to.
      * @param {number} offset The time offset to drift from.
-     * @returns {boolean} true When phase resets, false otherwise
+     * @returns {boolean} true When crossing the period boundary, false otherwise
      */
     declare function sync(period: number, offset?: number): boolean
     /** Euclidean rhythm generator. Distributes beats evenly across steps.
@@ -1169,6 +1214,7 @@ loader.init().then(monaco => {
     demo5,
     demo6,
     demo7,
+    demo8,
   }
   function loadDemo(demoName) {
     const demoContent = demos[demoName]
