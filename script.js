@@ -2,6 +2,7 @@ import loader from 'https://esm.sh/@monaco-editor/loader'
 import { AR } from './ar.js'
 import { Biquad } from './biquad.js'
 import { Compressor } from './compressor.js'
+import { Cross } from './cross.js'
 import { Delay } from './delay.js'
 import { demo } from './demo.js'
 import { demo2 } from './demo2.js'
@@ -160,19 +161,39 @@ function sync(period, offset = 0) {
 }
 g.sync = sync
 
-function euclidean(steps, beats, rotation = 0, offset = 0) {
-  // Calculate the Euclidean rhythm pattern
-  const pattern = []
-  let bucket = 0
+function euclidean(steps, beats, rotation = 0, offset = 0, period = 1) {
+  // Validate inputs
+  steps = Math.max(1, Math.floor(steps))
+  beats = Math.max(0, Math.min(beats, steps))
+  rotation = ((rotation % steps) + steps) % steps
+  period = Math.max(0.001, period)
 
-  for (let i = 0; i < steps; i++) {
-    bucket += beats
-    if (bucket >= steps) {
-      pattern.push(1)
-      bucket -= steps
-    }
-    else {
+  // Calculate the pattern using the Bjorklund algorithm
+  let pattern = []
+
+  if (beats === 0) {
+    // No beats, all zeros
+    for (let i = 0; i < steps; i++) {
       pattern.push(0)
+    }
+  }
+  else if (beats === steps) {
+    // All beats, all ones
+    for (let i = 0; i < steps; i++) {
+      pattern.push(1)
+    }
+  }
+  else {
+    // Use the Bjorklund algorithm
+    const groups = Math.floor(steps / beats)
+    const remainder = steps % beats
+
+    let index = 0
+    for (let i = 0; i < beats; i++) {
+      const groupSize = groups + (i < remainder ? 1 : 0)
+      for (let j = 0; j < groupSize; j++) {
+        pattern[index++] = (j === 0) ? 1 : 0
+      }
     }
   }
 
@@ -183,16 +204,17 @@ function euclidean(steps, beats, rotation = 0, offset = 0) {
     rotatedPattern[i] = pattern[index]
   }
 
-  // Calculate current step based on time
-  const step = Math.floor(((t + offset) % 1) * steps)
-  const currentBeat = rotatedPattern[step] === 1
+  // Calculate current step based on time with proper musical timing
+  const stepTime = period / steps
+  const currentTime = (t + offset) % period
+  const step = Math.floor(currentTime / stepTime) % steps
 
-  // Calculate previous step to detect transitions
-  const prevStep = Math.floor((((t - 1 / sampleRate) + offset) % 1) * steps)
-  const prevBeat = rotatedPattern[prevStep] === 1
+  // Calculate previous step to detect step transitions
+  const prevTime = ((t - 1 / sampleRate + offset) % period + period) % period
+  const prevStep = Math.floor(prevTime / stepTime) % steps
 
-  // Return true only on the rising edge (transition from false to true)
-  return currentBeat && !prevBeat
+  // Return true only when we transition to a new step that has a beat
+  return step !== prevStep && rotatedPattern[step] === 1
 }
 g.euc = euclidean
 
@@ -444,8 +466,74 @@ function ar(attack, release, trigger) {
 }
 g.ar = ar
 
+let crosses_i = 0
+const crosses = []
+function cross(input) {
+  let cross
+  if (crosses_i >= crosses.length) {
+    crosses.push(cross = new Cross())
+  }
+  else {
+    cross = crosses[crosses_i]
+  }
+  crosses_i++
+  return cross.processSample(input)
+}
+g.cross = cross
+
+class Adv {
+  constructor(step = 0.25) {
+    this.step = step
+    this.value = 0
+    this.previousTrigger = false
+  }
+
+  setStep(step) {
+    this.step = step
+  }
+
+  reset() {
+    this.value = 0
+    this.previousTrigger = false
+  }
+
+  processSample(trigger) {
+    // Detect rising edge of trigger
+    const triggerRising = trigger && !this.previousTrigger
+
+    if (triggerRising) {
+      // Advance by step and cycle back to 0 if >= 1
+      this.value += this.step
+      if (this.value >= 1) {
+        this.value = 0
+      }
+    }
+
+    // Store current trigger state for next frame
+    this.previousTrigger = trigger
+
+    return this.value
+  }
+}
+
+let advs_i = 0
+const advs = []
+function adv(step, trigger) {
+  let adv
+  if (advs_i >= advs.length) {
+    advs.push(adv = new Adv(step))
+  }
+  else {
+    adv = advs[advs_i]
+    adv.setStep(step)
+  }
+  advs_i++
+  return adv.processSample(trigger)
+}
+g.adv = adv
+
 g.t = 0
-g.n = 0
+g.f = 0
 let fn = function() {}
 
 const ctx = new AudioContext()
@@ -579,11 +667,13 @@ script.onaudioprocess = function(e) {
       expanders_i =
       gates_i =
       ars_i =
+      crosses_i =
+      advs_i =
       karplus_i =
         0
 
-    g.t = g.n / sampleRate
-    g.n++
+    g.t = g.f / sampleRate
+    g.f++
 
     fn()
 
@@ -641,9 +731,10 @@ loader.init().then(monaco => {
      * @param {number} beats The number of beats to distribute.
      * @param {number} rotation The rotation offset of the pattern (0 to steps-1).
      * @param {number} offset The time offset to drift from.
+     * @param {number} period The period in seconds for the pattern to repeat (default: 1).
      * @returns {boolean} true when a beat occurs, false otherwise
      */
-    declare function euclidean(steps: number, beats: number, rotation?: number, offset?: number): boolean
+    declare function euclidean(steps: number, beats: number, rotation?: number, offset?: number, period?: number): boolean
     /** Low pass filter.
      * @param {number} input The input signal.
      * @param {number} cut The cutoff frequency.
@@ -814,6 +905,17 @@ loader.init().then(monaco => {
      * @returns {number} The envelope value (0-1).
      */
     declare function ar(attack?: number, release?: number, trigger: boolean): number
+    /** Zero crossing detector. Outputs true for one frame when the input crosses zero.
+     * @param {number} input The input signal.
+     * @returns {boolean} true when zero crossing occurs, false otherwise.
+     */
+    declare function cross(input: number): boolean
+    /** Advances by a step each time trigger is true, cycling from 0 to 1.
+     * @param {number} step The step size (0..1).
+     * @param {boolean} trigger Advance when true.
+     * @returns {number} Current value (0..1).
+     */
+    declare function adv(step: number, trigger: boolean): number
 
     interface Array<T> {
       /** Pick a value from an array.
@@ -1054,8 +1156,8 @@ function stop() {
   ctx.suspend()
   isPlaying = false
   isStopped = true
-  t = 0
-  n = 0
+  g.t = 0
+  g.f = 0
   updatePlayButton()
 }
 

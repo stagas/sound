@@ -1,16 +1,7 @@
-export const demo5 = `// AR envelope demo - shows envelope always completes attack and release
-// Create a trigger pattern that changes at different intervals
-const trigger = sync(0.3) || (t > 2 && t < 2.1) || (t > 4 && t < 4.05)
-
-// Create AR envelope with 0.2s attack and 0.8s release
-const envelope = ar(0.2, 0.8, trigger)
-
-// Use the envelope to modulate a sine wave
-const freq = 220 + envelope * 440 // Frequency from 220Hz to 660Hz
-const signal = sin(freq) * 0.3
-
-// Add some visual feedback
-log('Envelope:', envelope.toFixed(3), 'Trigger:', trigger)
-
-out = signal
+export const demo5 = `const c = 'i iii iv v'.chords('dorian').pick(adv(1/4,sync(1/1)))
+const lead = c.ntof(3).chord(ks,sync(1/4))
+const bass = lp(saw(c[0].ntof(2)) * ar(.01,.2,sync(1/4)), 100, 2)
+const kick = hard(pk(hp(sin(30 + 185 * exp(1/2, 20), sync(1/2, .001)) * exp(1/2, 27), 70, 3), 80, .85, 5), .5) * 1.2
+const hihat = pk(hp(white() * (-1 - saw(8) + saw(1).o1), 7010, 1.2, 0), 10000, 1.5, 3.5) * .3
+out = compressor(kick + (hihat+lead+bass)*(1-kick.o1), -15, 10, .05, .5, 10)
 `
