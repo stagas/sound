@@ -112,20 +112,14 @@ String.prototype.chords = function(scale) {
   }
 
   const chordQualities = {
-    'i': [0, 2, 4], // minor in dorian
-    'ii': [1, 3, 5], // minor in dorian
-    'iii': [2, 4, 6], // major in dorian
-    'iv': [3, 5, 7], // major in dorian
-    'v': [4, 6, 8], // minor in dorian
-    'vi': [5, 7, 9], // diminished in dorian
-    'vii': [6, 8, 10], // minor in dorian
-    'I': [0, 2, 4], // major
-    'II': [1, 3, 5], // major
-    'III': [2, 4, 6], // major
-    'IV': [3, 5, 7], // major
-    'V': [4, 6, 8], // major
-    'VI': [5, 7, 9], // major
-    'VII': [6, 8, 10], // major
+    // Triad degrees relative to the selected scale (quality is implied by the scale)
+    'i': [0, 2, 4],
+    'ii': [1, 3, 5],
+    'iii': [2, 4, 6],
+    'iv': [3, 5, 7],
+    'v': [4, 6, 8],
+    'vi': [5, 7, 9],
+    'vii': [6, 8, 10],
   }
 
   return this.trim().split(/\s+/).map(chord => {

@@ -92,6 +92,23 @@ const componentData = {
         'period: The period in seconds for the pattern to repeat (default: 1).',
       ],
     },
+    {
+      name: 'cross',
+      signature: 'cross(input: number): boolean',
+      description: 'Zero crossing detector. Outputs true for one frame when the input crosses zero.',
+      parameters: [
+        'input: The input signal.',
+      ],
+    },
+    {
+      name: 'adv',
+      signature: 'adv(step: number, trigger: boolean): number',
+      description: 'Advances by a step each time trigger is true, cycling from 0 to 1.',
+      parameters: [
+        'step: The step size (0..1).',
+        'trigger: Advance when true.',
+      ],
+    },
   ],
   filters: [
     {
@@ -352,23 +369,6 @@ const componentData = {
       ],
     },
     {
-      name: 'cross',
-      signature: 'cross(input: number): boolean',
-      description: 'Zero crossing detector. Outputs true for one frame when the input crosses zero.',
-      parameters: [
-        'input: The input signal.',
-      ],
-    },
-    {
-      name: 'adv',
-      signature: 'adv(step: number, trigger: boolean): number',
-      description: 'Advances by a step each time trigger is true, cycling from 0 to 1.',
-      parameters: [
-        'step: The step size (0..1).',
-        'trigger: Advance when true.',
-      ],
-    },
-    {
       name: 'bpm',
       signature: 'bpm(bpm: number): number',
       description: 'Sets the tempo in BPM and returns a time multiplier.',
@@ -432,7 +432,8 @@ const componentData = {
     {
       name: 'String.chords',
       signature: 'string.chords(scale: string): number[][]',
-      description: 'Parses a string of chord progressions and returns an array of chord arrays.',
+      description:
+        'Parses a string of chord progressions and returns an array of chord arrays. Roman numerals are case-insensitive; chord quality is implied by the selected scale.',
       parameters: [
         'scale: The scale to use (e.g., "dorian", "major", "minor").',
       ],

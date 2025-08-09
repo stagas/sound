@@ -312,6 +312,7 @@ export function initMonaco(monaco) {
        */
       readonly notes: number[]
       /** Parses a string of chord progressions and returns an array of chord arrays.
+       * Roman numerals are case-insensitive; chord quality is implied by the selected scale.
        * @param {Scale} scale The scale to use (e.g., 'dorian', 'major', 'minor').
        * @returns {number[][]} Array of chord arrays, each containing semitone numbers.
        * @example 'i iv iii v'.chords('dorian') returns [[0,2,4], [3,5,7], [2,4,6], [4,6,8]]
@@ -411,6 +412,7 @@ export function initMonaco(monaco) {
     acceptSuggestionOnEnter: 'on',
     tabCompletion: 'on',
     wordBasedSuggestions: true,
+    fontFamily: 'JetBrains Mono',
   })
 
   window.addEventListener('resize', () => {
