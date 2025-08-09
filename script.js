@@ -764,7 +764,7 @@ script.onaudioprocess = function(e) {
 
     fn()
 
-    output[i] = out
+    output[i] = Number.isFinite(out) ? out : 0
   }
 }
 

@@ -1,9 +1,6 @@
-export const demo8 = `bpm(120)
-// Test the improved sync function
-// This should create a clean kick drum that only triggers when crossing the period boundary
+export const demo8 = `bpm(144)
+const kick = sin(60,sync(1/2))*exp(1/2,120)*0.3
+const hihat = bp(white()*0.2*exp(1/8,120+tri(8,sync(1,.14))*100),8500,1.35)
 
-const kick = sin(60, sync(1/2)) * exp(1/2, 20) * 0.3
-const hihat = white() * 0.1 * (sync(1/8) ? 1 : 0)
-
-out = kick + hihat
+out = delay(kick,.81,.35,.35)+hihat
 `
