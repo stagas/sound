@@ -79,6 +79,19 @@ const componentData = {
         'offset: The time offset to drift from.',
       ],
     },
+    {
+      name: 'euclidean',
+      signature:
+        'euclidean(steps: number, beats: number, rotation?: number, offset?: number, period?: number): boolean',
+      description: 'Euclidean rhythm generator. Distributes beats evenly across steps.',
+      parameters: [
+        'steps: The total number of steps in the pattern.',
+        'beats: The number of beats to distribute.',
+        'rotation: The rotation offset of the pattern (0 to steps-1).',
+        'offset: The time offset to drift from.',
+        'period: The period in seconds for the pattern to repeat (default: 1).',
+      ],
+    },
   ],
   filters: [
     {
@@ -144,22 +157,24 @@ const componentData = {
     },
     {
       name: 'ls',
-      signature: 'ls(input: number, cut: number, res: number): number',
+      signature: 'ls(input: number, cut: number, res: number, gain: number): number',
       description: 'Low shelf filter.',
       parameters: [
         'input: The input signal.',
         'cut: The cutoff frequency.',
         'res: The resonance.',
+        'gain: The gain.',
       ],
     },
     {
       name: 'hs',
-      signature: 'hs(input: number, cut: number, res: number): number',
+      signature: 'hs(input: number, cut: number, res: number, gain: number): number',
       description: 'High shelf filter.',
       parameters: [
         'input: The input signal.',
         'cut: The cutoff frequency.',
         'res: The resonance.',
+        'gain: The gain.',
       ],
     },
   ],
@@ -316,6 +331,16 @@ const componentData = {
         'range: The gate range in dB (-60 to 0).',
       ],
     },
+    {
+      name: 'ar',
+      signature: 'ar(attack?: number, release?: number, trigger: boolean): number',
+      description: 'An attack-release envelope generator.',
+      parameters: [
+        'attack: The attack time in seconds (0.001-10).',
+        'release: The release time in seconds (0.001-10).',
+        'trigger: When true, triggers the envelope.',
+      ],
+    },
   ],
   utilities: [
     {
@@ -324,6 +349,31 @@ const componentData = {
       description: 'Writes to the console.',
       parameters: [
         'args: The arguments to log.',
+      ],
+    },
+    {
+      name: 'cross',
+      signature: 'cross(input: number): boolean',
+      description: 'Zero crossing detector. Outputs true for one frame when the input crosses zero.',
+      parameters: [
+        'input: The input signal.',
+      ],
+    },
+    {
+      name: 'adv',
+      signature: 'adv(step: number, trigger: boolean): number',
+      description: 'Advances by a step each time trigger is true, cycling from 0 to 1.',
+      parameters: [
+        'step: The step size (0..1).',
+        'trigger: Advance when true.',
+      ],
+    },
+    {
+      name: 'bpm',
+      signature: 'bpm(bpm: number): number',
+      description: 'Sets the tempo in BPM and returns a time multiplier.',
+      parameters: [
+        'bpm: The tempo in beats per minute.',
       ],
     },
   ],

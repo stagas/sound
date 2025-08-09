@@ -800,6 +800,12 @@ loader.init().then(monaco => {
      * @returns {number} The output sample.
      */
     declare function white(): number
+    /** Karplus-Strong plucked string synthesis.
+     * @param {number} freq The frequency of the string.
+     * @param {boolean} pluck Trigger a new pluck when true.
+     * @returns {number} The output sample.
+     */
+    declare function ks(freq: number, pluck?: boolean): number
     /** Exponential decay.
      * @param {number} period The period.
      * @param {number} rate The decay rate.
@@ -872,7 +878,7 @@ loader.init().then(monaco => {
      * @param {number} gain The gain.
      * @returns {number} The output sample.
      */
-    declare function ls(input: number, cut: number, res: number): number
+    declare function ls(input: number, cut: number, res: number, gain: number): number
     /** High shelf filter.
      * @param {number} input The input signal.
      * @param {number} cut The cutoff frequency.
@@ -880,7 +886,7 @@ loader.init().then(monaco => {
      * @param {number} gain The gain.
      * @returns {number} The output sample.
      */
-    declare function hs(input: number, cut: number, res: number): number
+    declare function hs(input: number, cut: number, res: number, gain: number): number
     /** Delay with cubic interpolation.
      * @param {number} input The input signal.
      * @param {number} time The delay time in seconds.
