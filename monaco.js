@@ -331,8 +331,41 @@ export function initMonaco(monaco) {
   monaco.languages.typescript.javascriptDefaults.addExtraLib(libSource, libUri)
   monaco.editor.createModel(libSource, 'typescript', monaco.Uri.parse(libUri))
   monaco.editor.setTheme('vs-dark')
+  // Keep code in URL so it can be shared and recovered via navigation
+  function encodeCode(str) {
+    return btoa(encodeURIComponent(str))
+  }
+  function decodeCode(b64) {
+    try {
+      return decodeURIComponent(atob(b64))
+    }
+    catch (e) {
+      return null
+    }
+  }
+  function getCodeFromUrl() {
+    const url = new URL(window.location.href)
+    const encoded = url.searchParams.get('code')
+    if (!encoded) return null
+    const decoded = decodeCode(encoded)
+    return decoded
+  }
+  function setCodeToUrl(code) {
+    const url = new URL(window.location.href)
+    const encoded = encodeCode(code)
+    url.searchParams.set('code', encoded)
+    history.replaceState(null, '', url.toString())
+  }
+  function setCodeToUrlPush(code) {
+    const url = new URL(window.location.href)
+    const encoded = encodeCode(code)
+    url.searchParams.set('code', encoded)
+    history.pushState(null, '', url.toString())
+  }
+  const urlCode = getCodeFromUrl()
+  const initialCode = urlCode !== null ? urlCode : (localStorage.getItem('code') || demo)
   const editor = monaco.editor.create(document.getElementById('editor'), {
-    value: localStorage.getItem('code') || demo,
+    value: initialCode,
     language: 'javascript',
     minimap: {
       enabled: false,
@@ -422,6 +455,7 @@ export function initMonaco(monaco) {
   function compile() {
     const code = editor.getValue()
     localStorage.setItem('code', code)
+    setCodeToUrl(code)
     try {
       g.fn = new Function('bpm(120);' + code)
       log('')
@@ -467,6 +501,8 @@ export function initMonaco(monaco) {
   }
   function loadDemo(demoName) {
     const demoContent = demos[demoName]
+    // Push a new history entry BEFORE changing the editor, so Back returns to the previous code
+    setCodeToUrlPush(demoContent)
     editor.setValue(demoContent)
     localStorage.setItem('code', demoContent)
     compile()
@@ -474,5 +510,15 @@ export function initMonaco(monaco) {
 
   demoPicker.addEventListener('change', (e) => {
     loadDemo(e.target.value)
+  })
+
+  // Handle browser navigation restoring code from URL if present
+  window.addEventListener('popstate', () => {
+    const code = getCodeFromUrl()
+    if (code !== null) {
+      editor.setValue(code)
+      localStorage.setItem('code', code)
+      compile()
+    }
   })
 }
