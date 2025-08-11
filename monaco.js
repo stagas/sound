@@ -1,11 +1,4 @@
-import { demo } from './demo.js'
-import { demo2 } from './demo2.js'
-import { demo3 } from './demo3.js'
-import { demo4 } from './demo4.js'
-import { demo5 } from './demo5.js'
-import { demo6 } from './demo6.js'
-import { demo7 } from './demo7.js'
-import { demo8 } from './demo8.js'
+import { demo, demo2, demo3, demo4, demo5, demo6, demo7, demo8 } from './demos.js'
 
 const g = window.globalThis
 
