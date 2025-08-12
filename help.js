@@ -101,6 +101,25 @@ const componentData = {
       ],
     },
     {
+      name: 'String.fit',
+      signature: 'string.fit(period?: number, offset?: number): boolean',
+      description:
+        'Fits a pattern within a period. "x" = trigger, "-" = no trigger. Pattern repeats within the period.',
+      parameters: [
+        'period: The period in seconds for the pattern to repeat (default: 1).',
+        'offset: The time offset to drift from (default: 0).',
+      ],
+    },
+    {
+      name: 'String.trig',
+      signature: 'string.trig(period?: number, offset?: number): boolean',
+      description: 'Each "x" creates a trigger with the specified period. "x" = trigger, "-" = no trigger.',
+      parameters: [
+        'period: The period in seconds for each trigger (default: 1).',
+        'offset: The time offset to drift from (default: 0).',
+      ],
+    },
+    {
       name: 'adv',
       signature: 'adv(step: number, trigger: boolean): number',
       description: 'Advances by a step each time trigger is true, cycling from 0 to 1.',

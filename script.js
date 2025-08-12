@@ -24,6 +24,10 @@ function log(...args) {
 }
 g.log = log
 
+Array.prototype.walk = function(period = 1, offset = 0) {
+  return this.pick(adv(1 / this.length, sync(period, offset)))
+}
+
 Array.prototype.pick = function(value) {
   const index = Math.floor(value * this.length)
   return this[clamp(index, 0, this.length - 1)]
@@ -90,6 +94,88 @@ Object.defineProperty(String.prototype, 'notes', {
     }).filter(note => note !== null)
   },
 })
+
+// Global state tracking for string pattern functions
+let fitPatterns = new Map()
+let trigPatterns = new Map()
+g.fitPatterns = fitPatterns
+g.trigPatterns = trigPatterns
+
+String.prototype.fit = function(period = 1, offset = 0) {
+  // Convert string pattern to array of booleans
+  // 'x' = trigger, '-' = no trigger, any other character = no trigger
+  const pattern = this.split('').map(char => char.toLowerCase() === 'x')
+  const steps = pattern.length
+
+  if (steps === 0) return false
+
+  // Create a unique key for this pattern and parameters
+  const key = `${this}_${period}_${offset}`
+
+  // Get or create state tracking for this pattern
+  if (!fitPatterns.has(key)) {
+    fitPatterns.set(key, { previousPhase: 0 })
+  }
+  const state = fitPatterns.get(key)
+
+  // Use the same timing logic as Sync class
+  const currentPhase = (t + offset) % period
+  const previousPhase = state.previousPhase
+
+  // Detect crossing the period boundary (when phase wraps from high to low)
+  const crossed = previousPhase > currentPhase && previousPhase > period * 0.5
+
+  state.previousPhase = currentPhase
+
+  if (crossed) {
+    // When period wraps, advance to next step in pattern
+    if (!state.currentStep) state.currentStep = 0
+    state.currentStep = (state.currentStep + 1) % steps
+    return pattern[state.currentStep] === true
+  }
+
+  return false
+}
+
+String.prototype.trig = function(period = 1, offset = 0) {
+  // Convert string pattern to array of booleans
+  // 'x' = trigger, '-' = no trigger, any other character = no trigger
+  const pattern = this.split('').map(char => char.toLowerCase() === 'x')
+  const steps = pattern.length
+
+  if (steps === 0) return false
+
+  // Create a unique key for this pattern and parameters
+  const key = `${this}_${period}_${offset}`
+
+  // Get or create state tracking for this pattern
+  if (!trigPatterns.has(key)) {
+    trigPatterns.set(key, { previousPhase: 0, currentStep: 0 })
+  }
+  const state = trigPatterns.get(key)
+
+  // Each 'x' creates a trigger with the specified period
+  const totalPeriod = period * steps
+  const currentPhase = (t + offset) % totalPeriod
+  const previousPhase = state.previousPhase
+
+  // Detect crossing the period boundary for the current step
+  const stepPeriod = period
+  const stepPhase = currentPhase % stepPeriod
+  const prevStepPhase = previousPhase % stepPeriod
+
+  const crossed = prevStepPhase > stepPhase && prevStepPhase > stepPeriod * 0.5
+
+  state.previousPhase = currentPhase
+
+  if (crossed) {
+    // When step period wraps, advance to next step in pattern
+    state.currentStep = (state.currentStep + 1) % steps
+    return pattern[state.currentStep] === true
+  }
+
+  return false
+}
 
 String.prototype.chords = function(scale) {
   const scaleMap = {
@@ -179,6 +265,7 @@ class Sync {
 
 let syncs_i = 0
 const syncs = []
+g.syncs = syncs
 function sync(period, offset = 0) {
   let sync
   if (syncs_i >= syncs.length) {
@@ -551,6 +638,7 @@ class Adv {
 
 let advs_i = 0
 const advs = []
+g.advs = advs
 function adv(step, trigger) {
   let adv
   if (advs_i >= advs.length) {
@@ -783,6 +871,17 @@ function stop() {
   g.t = 0
   g.f = 0
   g.bpmMultiplier = 1
+
+  // Reset pattern state tracking
+  fitPatterns.clear()
+  trigPatterns.clear()
+
+  // Reset all Adv instances
+  advs.forEach(adv => adv.reset())
+
+  // Reset all Sync instances
+  syncs.forEach(sync => sync.reset())
+
   updatePlayButton()
 }
 

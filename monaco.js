@@ -1,4 +1,4 @@
-import { demo, demo2, demo3, demo4, demo5, demo6, demo7, demo8 } from './demos.js'
+import { demo, demo2, demo3, demo4, demo5, demo6, demo7, demo8, demo9 } from './demos.js'
 
 const g = window.globalThis
 
@@ -311,6 +311,18 @@ export function initMonaco(monaco) {
        * @example 'i iv iii v'.chords('dorian') returns [[0,2,4], [3,5,7], [2,4,6], [4,6,8]]
        */
       chords(scale: Scale): number[][]
+      /** Fits a pattern within a period. "x" = trigger, "-" = no trigger. Pattern repeats within the period.
+       * @param {number} period The period in seconds for the pattern to repeat (default: 1).
+       * @param {number} offset The time offset to drift from (default: 0).
+       * @returns {boolean} true when a trigger occurs, false otherwise.
+       */
+      fit(period?: number, offset?: number): boolean
+      /** Each "x" creates a trigger with the specified period. "x" = trigger, "-" = no trigger.
+       * @param {number} period The period in seconds for each trigger (default: 1).
+       * @param {number} offset The time offset to drift from (default: 0).
+       * @returns {boolean} true when a trigger occurs, false otherwise.
+       */
+      trig(period?: number, offset?: number): boolean
     }
 
     /** Writes to the console.
@@ -491,6 +503,7 @@ export function initMonaco(monaco) {
     demo6,
     demo7,
     demo8,
+    demo9,
   }
   function loadDemo(demoName) {
     const demoContent = demos[demoName]
@@ -498,6 +511,22 @@ export function initMonaco(monaco) {
     setCodeToUrlPush(demoContent)
     editor.setValue(demoContent)
     localStorage.setItem('code', demoContent)
+
+    // Reset timing state when switching demos
+    g.t = 0
+    g.f = 0
+    g.bpmMultiplier = 1
+
+    // Reset pattern state tracking
+    if (g.fitPatterns) g.fitPatterns.clear()
+    if (g.trigPatterns) g.trigPatterns.clear()
+
+    // Reset all Adv instances
+    if (g.advs) g.advs.forEach(adv => adv.reset())
+
+    // Reset all Sync instances
+    if (g.syncs) g.syncs.forEach(sync => sync.reset())
+
     compile()
   }
 
@@ -511,6 +540,22 @@ export function initMonaco(monaco) {
     if (code !== null) {
       editor.setValue(code)
       localStorage.setItem('code', code)
+
+      // Reset timing state when navigating
+      g.t = 0
+      g.f = 0
+      g.bpmMultiplier = 1
+
+      // Reset pattern state tracking
+      if (g.fitPatterns) g.fitPatterns.clear()
+      if (g.trigPatterns) g.trigPatterns.clear()
+
+      // Reset all Adv instances
+      if (g.advs) g.advs.forEach(adv => adv.reset())
+
+      // Reset all Sync instances
+      if (g.syncs) g.syncs.forEach(sync => sync.reset())
+
       compile()
     }
   })
