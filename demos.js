@@ -73,8 +73,9 @@ out = compressor(ls(reverb(delay(kick,.81,.35,.35)+hihat+bass,.5,.5,.75,.35,.065
 `
 
 export const demo9 = `bpm(144)
-const kick = sin(50, sync(1/4)) * ar(.001, .05, 'x-'.fit(1/4))
-const hh = hp(white() * ar(.001, .1, 'x'.trig(1/8)),9000,1.26)*.035
-const bass = lp(saw( [55, 58, 164, 77].walk(1/2) ),120,.25) * ar(.012, .06, '--xx'.fit(1/8))*.57
-out=compressor(ls(kick+hh+bass,200,.5,-14),-20,8,.001,.01,30)*4
+const kick = sin(50,sync(1/4))*ar(.001, .04, 'x-'.fit(1/4))*.85
+const hh = hp((pwm(673,.91)+pwm(622,.39)+pwm(710,.95))*ar(.001,.032,'x-xx'.trig(1/8)),7000,2.66)*.005
+const bm = [55, 58, 164, 107].slide(saw(1,sync(2)).o1)
+const bass = lp((saw(bm)+tri(bm/2))*.5,120,.25)*ar(.008, .076, '--xx'.fit(1/8))*.97
+out=atan(compressor(ls(kick+hh+bass,200,.5,-18),-25,8,.001,.05,40)*10)
 `

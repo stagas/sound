@@ -25,12 +25,31 @@ function log(...args) {
 g.log = log
 
 Array.prototype.walk = function(period = 1, offset = 0) {
+  period = safeNumber(period)
+  offset = safeNumber(offset)
   return this.pick(adv(1 / this.length, sync(period, offset)))
 }
 
 Array.prototype.pick = function(value) {
+  value = safeNumber(value)
   const index = Math.floor(value * this.length)
   return this[clamp(index, 0, this.length - 1)]
+}
+
+Array.prototype.slide = function(value) {
+  value = safeNumber(value)
+  const clampedValue = clamp(value, 0, 1)
+  const scaledValue = clampedValue * (this.length - 1)
+  const index = Math.floor(scaledValue)
+  const fraction = scaledValue - index
+
+  if (index >= this.length - 1) {
+    return this[this.length - 1]
+  }
+
+  const current = this[index]
+  const next = this[index + 1]
+  return current + (next - current) * fraction
 }
 
 Array.prototype.chord = function(oscillator, ...rest) {
@@ -40,6 +59,7 @@ Array.prototype.chord = function(oscillator, ...rest) {
 }
 
 Array.prototype.ntof = function(octave = 0) {
+  octave = safeNumber(octave)
   return this.map(semitone => semitone.ntof(octave))
 }
 
@@ -56,6 +76,7 @@ Object.defineProperty(Number.prototype, 'w', {
 })
 
 Number.prototype.ntof = function(octave = 0) {
+  octave = safeNumber(octave)
   return 16.35 * Math.pow(2, (this + (octave * 12)) / 12)
 }
 
@@ -217,18 +238,22 @@ String.prototype.chords = function(scale) {
 }
 
 Number.prototype.mul = function(other = 0) {
+  other = safeNumber(other)
   return this * other
 }
 
 Number.prototype.add = function(other = 0) {
+  other = safeNumber(other)
   return this + other
 }
 
 Number.prototype.sub = function(other = 0) {
+  other = safeNumber(other)
   return this - other
 }
 
 Number.prototype.div = function(other = 0) {
+  other = safeNumber(other)
   return this / other
 }
 
@@ -240,11 +265,11 @@ class Sync {
   }
 
   setPeriod(period) {
-    this.period = period
+    this.period = safeNumber(period)
   }
 
   setOffset(offset) {
-    this.offset = offset
+    this.offset = safeNumber(offset)
   }
 
   reset() {
@@ -252,7 +277,7 @@ class Sync {
   }
 
   processSample() {
-    const currentPhase = (t + this.offset) % this.period
+    const currentPhase = (t + this.offset * this.period) % this.period
     const previousPhase = this.previousPhase
 
     // Detect crossing the period boundary (when phase wraps from high to low)
@@ -267,6 +292,8 @@ let syncs_i = 0
 const syncs = []
 g.syncs = syncs
 function sync(period, offset = 0) {
+  period = safeNumber(period)
+  offset = safeNumber(offset)
   let sync
   if (syncs_i >= syncs.length) {
     syncs.push(sync = new Sync())
@@ -283,6 +310,11 @@ g.sync = sync
 
 function euclidean(steps, beats, rotation = 0, offset = 0, period = 1) {
   // Validate inputs
+  steps = safeNumber(steps)
+  beats = safeNumber(beats)
+  rotation = safeNumber(rotation)
+  offset = safeNumber(offset)
+  period = safeNumber(period)
   steps = Math.max(1, Math.floor(steps))
   beats = Math.max(0, Math.min(beats, steps))
   rotation = ((rotation % steps) + steps) % steps
@@ -341,6 +373,7 @@ g.euc = euclidean
 let sines_i = 0
 const sines = []
 function sin(freq, sync) {
+  freq = safeNumber(freq)
   let osc
   if (sines_i >= sines.length) {
     sines.push(osc = new Sin())
@@ -363,6 +396,7 @@ let polybleps_i = 0
 const polybleps = []
 function createPolyBlep(waveform) {
   return function(freq, sync) {
+    freq = safeNumber(freq)
     let osc
     if (polybleps_i >= polybleps.length) {
       polybleps.push(osc = new PolyBlepOscillator())
@@ -386,6 +420,33 @@ function createPolyBlep(waveform) {
 g.saw = createPolyBlep(0)
 g.sqr = createPolyBlep(1)
 g.tri = createPolyBlep(2)
+g.ramp = createPolyBlep(3)
+
+// PWM with duty cycle control
+function pwm(freq, dutyCycle = 0.5, sync) {
+  freq = safeNumber(freq)
+  dutyCycle = safeNumber(dutyCycle)
+  let osc
+  if (polybleps_i >= polybleps.length) {
+    polybleps.push(osc = new PolyBlepOscillator())
+  }
+  else {
+    osc = polybleps[polybleps_i]
+  }
+  if (freq !== osc.frequency) {
+    osc.setFrequency(freq)
+  }
+  if (osc.waveform !== 4) {
+    osc.setWaveform(4)
+  }
+  osc.setPwmDutyCycle(dutyCycle)
+  polybleps_i++
+  if (sync) {
+    osc.phase = 0
+  }
+  return osc.process()
+}
+g.pwm = pwm
 
 function white() {
   return Math.random() * 2 - 1
@@ -395,6 +456,7 @@ g.white = white
 let karplus_i = 0
 const karplus = []
 function karplusStrong(freq, pluck) {
+  freq = safeNumber(freq)
   let ks
   if (karplus_i >= karplus.length) {
     karplus.push(ks = new KarplusStrong())
@@ -414,6 +476,8 @@ function karplusStrong(freq, pluck) {
 g.ks = karplusStrong
 
 function exp(period = 0, rate = 0) {
+  period = safeNumber(period)
+  rate = safeNumber(rate)
   return Math.exp(-(t % period) * rate)
 }
 g.exp = exp
@@ -423,6 +487,10 @@ const biquads = []
 function createBiquad(type) {
   const method = 'set' + type
   return function(input, cut, res, gain) {
+    input = safeNumber(input)
+    cut = safeNumber(cut)
+    res = safeNumber(res)
+    gain = safeNumber(gain)
     let biquad
     if (biquads_i >= biquads.length) {
       biquads.push(biquad = new Biquad())
@@ -447,6 +515,10 @@ g.hs = createBiquad('HighShelf')
 let delays_i = 0
 const delays = []
 function delay(input, time, feedback, wet) {
+  input = safeNumber(input)
+  time = safeNumber(time)
+  feedback = safeNumber(feedback)
+  wet = safeNumber(wet)
   let delay
   if (delays_i >= delays.length) {
     delays.push(delay = new Delay())
@@ -465,6 +537,12 @@ g.delay = delay
 let reverbs_i = 0
 const reverbs = []
 function reverb(input, diffusion1, diffusion2, damping, decay, wet) {
+  input = safeNumber(input)
+  diffusion1 = safeNumber(diffusion1)
+  diffusion2 = safeNumber(diffusion2)
+  damping = safeNumber(damping)
+  decay = safeNumber(decay)
+  wet = safeNumber(wet)
   let reverb
   if (reverbs_i >= reverbs.length) {
     reverbs.push(reverb = new DattorroReverb(sampleRate))
@@ -486,6 +564,8 @@ let waveshapers_i = 0
 const waveshapers = []
 function createWaveshaper(type) {
   return function(input, amount) {
+    input = safeNumber(input)
+    amount = safeNumber(amount || 1)
     let waveshaper
     if (waveshapers_i >= waveshapers.length) {
       waveshapers.push(waveshaper = new Waveshaper())
@@ -493,7 +573,7 @@ function createWaveshaper(type) {
     else {
       waveshaper = waveshapers[waveshapers_i]
     }
-    waveshaper.setAmount(amount || 1)
+    waveshaper.setAmount(amount)
     waveshapers_i++
     return waveshaper.processSample(input, type)
   }
@@ -512,6 +592,12 @@ g.reduce = createWaveshaper('sampleRateReduce')
 let compressors_i = 0
 const compressors = []
 function compressor(input, threshold, ratio, attack, release, knee) {
+  input = safeNumber(input)
+  threshold = safeNumber(threshold || -24)
+  ratio = safeNumber(ratio || 4)
+  attack = safeNumber(attack || 0.003)
+  release = safeNumber(release || 0.25)
+  knee = safeNumber(knee || 0)
   let comp
   if (compressors_i >= compressors.length) {
     compressors.push(comp = new Compressor())
@@ -519,11 +605,11 @@ function compressor(input, threshold, ratio, attack, release, knee) {
   else {
     comp = compressors[compressors_i]
   }
-  comp.setThreshold(threshold || -24)
-  comp.setRatio(ratio || 4)
-  comp.setAttack(attack || 0.003)
-  comp.setRelease(release || 0.25)
-  comp.setKnee(knee || 0)
+  comp.setThreshold(threshold)
+  comp.setRatio(ratio)
+  comp.setAttack(attack)
+  comp.setRelease(release)
+  comp.setKnee(knee)
   compressors_i++
   return comp.processSample(input)
 }
@@ -532,6 +618,12 @@ g.compressor = compressor
 let expanders_i = 0
 const expanders = []
 function expander(input, threshold, ratio, attack, release, knee) {
+  input = safeNumber(input)
+  threshold = safeNumber(threshold || -24)
+  ratio = safeNumber(ratio || 2)
+  attack = safeNumber(attack || 0.003)
+  release = safeNumber(release || 0.25)
+  knee = safeNumber(knee || 0)
   let exp
   if (expanders_i >= expanders.length) {
     expanders.push(exp = new Expander())
@@ -539,11 +631,11 @@ function expander(input, threshold, ratio, attack, release, knee) {
   else {
     exp = expanders[expanders_i]
   }
-  exp.setThreshold(threshold || -24)
-  exp.setRatio(ratio || 2)
-  exp.setAttack(attack || 0.003)
-  exp.setRelease(release || 0.25)
-  exp.setKnee(knee || 0)
+  exp.setThreshold(threshold)
+  exp.setRatio(ratio)
+  exp.setAttack(attack)
+  exp.setRelease(release)
+  exp.setKnee(knee)
   expanders_i++
   return exp.processSample(input)
 }
@@ -552,6 +644,12 @@ g.expander = expander
 let gates_i = 0
 const gates = []
 function gate(input, threshold, attack, release, hold, range) {
+  input = safeNumber(input)
+  threshold = safeNumber(threshold || -24)
+  attack = safeNumber(attack || 0.003)
+  release = safeNumber(release || 0.25)
+  hold = safeNumber(hold || 0.1)
+  range = safeNumber(range || -60)
   let g
   if (gates_i >= gates.length) {
     gates.push(g = new Gate())
@@ -559,11 +657,11 @@ function gate(input, threshold, attack, release, hold, range) {
   else {
     g = gates[gates_i]
   }
-  g.setThreshold(threshold || -24)
-  g.setAttack(attack || 0.003)
-  g.setRelease(release || 0.25)
-  g.setHold(hold || 0.1)
-  g.setRange(range || -60)
+  g.setThreshold(threshold)
+  g.setAttack(attack)
+  g.setRelease(release)
+  g.setHold(hold)
+  g.setRange(range)
   gates_i++
   return g.processSample(input)
 }
@@ -572,6 +670,8 @@ g.gate = gate
 let ars_i = 0
 const ars = []
 function ar(attack, release, trigger) {
+  attack = safeNumber(attack || 0.1)
+  release = safeNumber(release || 0.5)
   let ar
   if (ars_i >= ars.length) {
     ars.push(ar = new AR())
@@ -579,8 +679,8 @@ function ar(attack, release, trigger) {
   else {
     ar = ars[ars_i]
   }
-  ar.setAttack(attack || 0.1)
-  ar.setRelease(release || 0.5)
+  ar.setAttack(attack)
+  ar.setRelease(release)
   ars_i++
   return ar.processSample(trigger)
 }
@@ -589,6 +689,7 @@ g.ar = ar
 let crosses_i = 0
 const crosses = []
 function cross(input) {
+  input = safeNumber(input)
   let cross
   if (crosses_i >= crosses.length) {
     crosses.push(cross = new Cross())
@@ -609,7 +710,7 @@ class Adv {
   }
 
   setStep(step) {
-    this.step = step
+    this.step = safeNumber(step)
   }
 
   reset() {
@@ -640,6 +741,7 @@ let advs_i = 0
 const advs = []
 g.advs = advs
 function adv(step, trigger) {
+  step = safeNumber(step)
   let adv
   if (advs_i >= advs.length) {
     advs.push(adv = new Adv(step))
@@ -660,12 +762,12 @@ class Bpm {
   }
 
   setBpm(bpm) {
-    this.bpm = bpm
+    this.bpm = safeNumber(bpm)
     // Convert BPM to time multiplier
     // At 120 BPM, 1 beat = 0.5 seconds, so we want t to advance at normal speed
     // At 60 BPM, 1 beat = 1 second, so we want t to advance at half speed
     // At 240 BPM, 1 beat = 0.25 seconds, so we want t to advance at double speed
-    this.multiplier = bpm / 120
+    this.multiplier = this.bpm / 120
     // Store the multiplier globally so it can be used in time calculation
     g.bpmMultiplier = this.multiplier
   }
@@ -678,6 +780,7 @@ class Bpm {
 let bpms_i = 0
 const bpms = []
 function bpm(bpmValue) {
+  bpmValue = safeNumber(bpmValue)
   let bpm
   if (bpms_i >= bpms.length) {
     bpms.push(bpm = new Bpm())
@@ -813,33 +916,67 @@ function updateWaveformDisplay() {
   requestAnimationFrame(updateWaveformDisplay)
 }
 
+function resetMachines() {
+  sines_i =
+    polybleps_i =
+    biquads_i =
+    delays_i =
+    reverbs_i =
+    waveshapers_i =
+    compressors_i =
+    expanders_i =
+    gates_i =
+    ars_i =
+    crosses_i =
+    advs_i =
+    karplus_i =
+    bpms_i =
+    syncs_i =
+      0
+}
+
+function advanceClock() {
+  g.t = (g.f / sampleRate) * g.bpmMultiplier
+  g.f++
+}
+
+function safeNumber(value) {
+  return Number.isFinite(value) ? value : 0
+}
+
+let lastKnownFn = () => {
+  out = 0
+}
+
 script.onaudioprocess = function(e) {
   const output = e.outputBuffer.getChannelData(0)
 
-  for (let i = 0; i < output.length; i++) {
-    sines_i =
-      polybleps_i =
-      biquads_i =
-      delays_i =
-      reverbs_i =
-      waveshapers_i =
-      compressors_i =
-      expanders_i =
-      gates_i =
-      ars_i =
-      crosses_i =
-      advs_i =
-      karplus_i =
-      bpms_i =
-      syncs_i =
-        0
+  resetMachines()
+  advanceClock()
 
-    g.t = (g.f / sampleRate) * g.bpmMultiplier
-    g.f++
+  start:
+  do {
+    try {
+      fn()
+      lastKnownFn = fn
+    }
+    catch (e) {
+      fn = lastKnownFn
+      log(e.message)
+      continue start
+    }
+  }
+  while (false)
+
+  output[0] = safeNumber(out)
+
+  for (let i = 1; i < output.length; i++) {
+    resetMachines()
+    advanceClock()
 
     fn()
 
-    output[i] = Number.isFinite(out) ? out : 0
+    output[i] = safeNumber(out)
   }
 }
 

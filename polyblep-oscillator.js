@@ -3,8 +3,9 @@ export class PolyBlepOscillator {
     this.phase = 0.0
     this.frequency = 440.0
     this.lastOutput = 0.0
-    this.waveform = 0 // 0 = sawtooth, 1 = square, 2 = triangle
+    this.waveform = 0 // 0 = sawtooth, 1 = square, 2 = triangle, 3 = ramp, 4 = pwm
     this.dt = 0.0
+    this.pwmDutyCycle = 0.5 // PWM duty cycle (0.0 to 1.0)
   }
 
   setFrequency(freq = 0) {
@@ -14,6 +15,10 @@ export class PolyBlepOscillator {
 
   setWaveform(waveform) {
     this.waveform = waveform
+  }
+
+  setPwmDutyCycle(dutyCycle) {
+    this.pwmDutyCycle = Math.max(0.0, Math.min(1.0, dutyCycle))
   }
 
   polyBlep(t) {
@@ -86,6 +91,26 @@ export class PolyBlepOscillator {
           this.lastOutput = this.lastOutput * leak + (square * dt * 4.0)
           output = this.lastOutput
         }
+        break
+
+      case 3: // Ramp (rising sawtooth)
+        // Naive ramp: ramp from -1 to 1 (rising)
+        output = -1.0 + (2.0 * this.phase)
+        // Add PolyBLEP to remove discontinuity at phase wraparound
+        output += this.polyBlep(this.phase)
+        break
+
+      case 4: // PWM (Pulse Width Modulation)
+        if (this.phase < this.pwmDutyCycle) {
+          output = 1.0
+        }
+        else {
+          output = -1.0
+        }
+        // Add PolyBLEP at rising edge (phase = 0)
+        output += this.polyBlep(this.phase)
+        // Subtract PolyBLEP at falling edge (phase = dutyCycle)
+        output -= this.polyBlep((this.phase + (1.0 - this.pwmDutyCycle)) % 1.0)
         break
 
       default:
