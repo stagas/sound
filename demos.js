@@ -24,7 +24,7 @@ out = piano_snd
 `
 
 export const demo3 =
-  `out = lp('i iii vii v'.chords('dorian').pick(saw(1/8,sync(16)).o1).ntof(3).chord(saw,sync(1/4))*exp(1/4,10)*0.1,2000+sin(.1)*1500,1.25)
+  `out = atan(lp('i iii vii v'.chords('dorian').pick(saw(1/8,sync(16)).o1).ntof(3).chord(saw,sync(1/4))*exp(1/4,10)*0.1,2000+sin(.1)*1500,1.25)*10)
 `
 
 export const demo4 = `const c = 'i ii vi v'.chords('mixolydian').pick(saw(1/2)).ntof(3)
@@ -32,7 +32,7 @@ const guitar =
     ks(c[0],sync(1/2))*.4
   + ks(c[1],sync(1/3))*.3
   + ks(c[2],sync(1/4))*.2
-out = reverb(delay(guitar,1/3,.125,.24),.6,.5,.32,.55,.1)
+out = atan(reverb(delay(guitar,1/3,.125,.24),.6,.5,.32,.55,.1)*10)
 `
 
 export const demo5 = `const c = 'i iii iv v'.chords('dorian').pick(adv(1/4,sync(1/1)))

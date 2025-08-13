@@ -898,13 +898,39 @@ function updateWaveformDisplay() {
   waveformDisplayCtx.strokeStyle = '#ff00ff'
   waveformDisplayCtx.lineWidth = 1
 
+  // Convert to float array for easier processing
+  const floatData = new Float32Array(dataArray.length)
   for (let i = 0; i < dataArray.length; i++) {
-    const x = (i / dataArray.length) * waveformDisplayCanvas.width
-    const sample = (dataArray[i] - 128) / 128 // Convert to -1 to 1 range
-    const y = (waveformDisplayCanvas.height / 2) + (sample * (waveformDisplayCanvas.height / 2))
+    floatData[i] = (dataArray[i] - 128) / 128 // Convert to -1 to 1 range
+  }
 
-    if (i === 0) {
+  // Find trigger point (zero crossing on rising edge)
+  const triggerLevel = 0.01
+  let triggerIndex = 0
+  const searchLength = Math.floor(dataArray.length / 2)
+
+  for (let i = 0; i < searchLength - 1; i++) {
+    if (floatData[i] < triggerLevel && floatData[i + 1] >= triggerLevel) {
+      triggerIndex = i
+      break
+    }
+  }
+
+  // Draw waveform starting from trigger point
+  const centerY = waveformDisplayCanvas.height / 2
+  const amplitude = centerY * 0.8
+
+  let first = true
+
+  for (let i = 0; i < dataArray.length; i++) {
+    const sampleIndex = (triggerIndex + i) % dataArray.length
+    const sample = floatData[sampleIndex]
+    const x = (i / dataArray.length) * waveformDisplayCanvas.width
+    const y = centerY + sample * amplitude
+
+    if (first) {
       waveformDisplayCtx.moveTo(x, y)
+      first = false
     }
     else {
       waveformDisplayCtx.lineTo(x, y)
