@@ -818,7 +818,7 @@ script.connect(gainNode)
 
 // Canvas visualizer setup
 const canvas = document.getElementById('visualizer')
-const canvasCtx = canvas.getContext('2d', { alpha: false })
+const canvasCtx = canvas.getContext('2d', { alpha: true, willReadFrequently: true })
 const waveformCanvas = document.getElementById('waveform')
 const waveformCtx = waveformCanvas.getContext('2d', { alpha: false })
 const waveformDisplayCanvas = document.getElementById('waveformDisplay')
